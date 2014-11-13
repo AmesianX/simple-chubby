@@ -1,0 +1,16 @@
+# To build from a release that already has a configure file:
+
+    ./configure
+    make
+
+# To see the documentation, run:
+
+    doxygen
+    xdg-open doc/html/index.html
+
+# To build after a git checkout without that doesn't have ./configure, run:
+
+    autoreconf -i
+    ./configure
+    make
+
