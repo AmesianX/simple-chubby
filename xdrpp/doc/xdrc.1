@@ -1,0 +1,343 @@
+.TH "xdrc" "1" "" "" ""
+.SH NAME
+.PP
+xdrc \- RFC4506 XDR compiler for libxdrpp
+.SH SYNOPSIS
+.PP
+xdrc {\-hh|\-serverhh|\-servercc} [\-o \f[I]outfile\f[]]
+[\-DMACRO=val...] \f[I]input\f[].x
+.SH DESCRIPTION
+.PP
+\f[C]xdrc\f[] compiles an RFC4506 XDR (external data representation)
+file into a C++11 header file, creating a new C++ type for each type
+defined in XDR.
+.SS Native representations
+.PP
+\f[C]xdrc\f[] uses the following representations for XDR types in C++:
+.IP \[bu] 2
+XDR structs are translated field\-for\-field into C++ structures.
+.IP \[bu] 2
+XDR unions are translated into a structure in which each field is
+actually a method that either returns a reference to the underlying
+value, or throws an exception if that field is not currently selected.
+The discriminant method with no arguments returns the value, and with a
+value sets the discriminant (also constructing the appropriate union
+field).
+For example, if the XDR file contains:
+.RS 2
+.IP
+.nf
+\f[C]
+union\ MyType\ switch\ (unsigned\ discriminant)\ {
+case\ 0:
+\ \ int\ zero;
+case\ 1:
+\ \ string\ one<>;
+default:
+\ \ void;
+}
+\f[]
+.fi
+.PP
+The C++ type can be accessed as follows:
+.IP
+.nf
+\f[C]
+MyType\ mt;
+mt.discriminant(1);
+mt.one()\ =\ "hello";
+std::cout\ <<\ mt.one()\ <<\ std::endl;
+mt.discriminant(0);
+mt.zero()\ =\ 5;
+
+std::cout\ <<\ mt.one()\ <<\ std::endl;\ //\ throws\ xdr_wrong_union
+\f[]
+.fi
+.RE
+.IP \[bu] 2
+XDR \f[C]bool\f[] is represented as a C++ \f[C]bool\f[] (with XDR\[aq]s
+\f[C]TRUE\f[] translated to \f[C]true\f[] and \f[C]FALSE\f[] to
+\f[C]false\f[]).
+.IP \[bu] 2
+XDR [unsigned] \f[C]int\f[] and \f[C]hyper\f[] types are represented as
+the cstdint types \f[C]std::int32_t\f[], \f[C]std::uint32_t\f[],
+\f[C]std::int64_t\f[], and \f[C]std::uint64_t\f[].
+As per RFC4506, no types narrower than 32 bits exist.
+.IP \[bu] 2
+XDR enums are translated into simple (non\-class) unions with underlying
+type \f[C]std::uint32_t\f[].
+.IP \[bu] 2
+XDR pointers (\f[C]*\f[]) are translated into C++ \f[C]xdr:pointer\f[],
+a subtype of \f[C]std::unique_ptr\f[].
+\f[C]xdr::pointer\f[] adds an \f[C]activate()\f[] method that allocates
+an object of the appropriate type (if the pointer is null) and returns a
+reference to the current object.
+.IP \[bu] 2
+XDR fixed\-length arrays are translated into C++ \f[C]xdr::xarray\f[], a
+subtype of \f[C]std::array\f[].
+.IP \[bu] 2
+XDR variable\-length arrays (\f[C]type\ field<N>\f[]) are translated
+into C++ \f[C]xdr::xvector<T,N>\f[], a subtype of
+\f[C]std::vector<T>\f[], where \f[C]N\f[] represents the maximum size.
+Static constexpr method \f[C]max_size()\f[] returns the maximum size.
+.IP \[bu] 2
+XDR opaque is translated into C++ \f[C]std::uint8_t\f[], but as per
+RFC4506, opaque may only appear as part of a fixed\- or variable\-length
+array declaration.
+.IP \[bu] 2
+XDR \f[C]string<N>\f[] is translated into \f[C]xdr::xstring<N>\f[], a
+subtype of string encoding the maximum size.
+Static constexpr method \f[C]max_size()\f[] returns the maximum size.
+.SS Extensions to RFC4506
+.PP
+\f[C]xdrc\f[] supports the following extensions to the syntax defined in
+RFC4506:
+.IP \[bu] 2
+Portions of the input file may be bracketed by
+\f[C]namespace\ myns\ {\f[] ...
+\f[C]}\f[].
+The corresponding C++ will be embedded in the same namespace.
+.IP \[bu] 2
+Lines beginning with a \f[C]%\f[] sign are copied verbatim into the
+output file.
+.IP \[bu] 2
+Type names may include a namespace scope \f[C]::\f[], so as to be able
+to make use of types defined in a different namespace.
+(Alternatively, a literal can be used, such as
+\f[C]%using\ namespace\ otherns;\f[].)
+.SS Serialization and traversing data structures
+.PP
+A template class \f[C]xdr::xdr_traits<T>\f[] is used to hold metadata
+for each native C++ type \f[C]T\f[] representing an XDR type.
+For XDR structs, unions, arrays and pointers, this traits class contains
+two important static methods:
+.IP
+.nf
+\f[C]
+template<class\ Archive>\ void\ save(Archive\ &archive,\ const\ T\ &);
+template<class\ Archive>\ void\ load(Archive\ &archive,\ T\ &);
+\f[]
+.fi
+.PP
+These methods use \f[C]archive\f[] as a function object and call it on
+every field in the data structure.
+Hence, the type \f[C]Archive\f[] can have an overloaded
+\f[C]operator()\f[] that does different things for different types.
+To implement an archive, you will need to support the following types:
+.RS
+.IP \[bu] 2
+\f[C]bool\f[], \f[C]std::int32_t\f[], \f[C]std::uint32_t\f[],
+\f[C]std::int64_t\f[], \f[C]std::uint64_t\f[], \f[C]float\f[],
+\f[C]double\f[], \f[C]xdr::xstring\f[], \f[C]xdr::opaque_array\f[] and
+\f[C]xdr::opaque_vec\f[] (the latter two are not considered containers,
+despite being implemented in terms of \f[C]xarray\f[] and
+\f[C]xvector\f[]).
+.RE
+.RS
+.IP \[bu] 2
+The \f[C]xdr::xarray\f[], \f[C]xdr:xvector\f[], and
+\f[C]xdr::pointer\f[] containers of the above types (or their supertypes
+\f[C]std::array\f[], \f[C]std::vector\f[], and
+\f[C]std::unique_ptr\f[]).
+.RE
+.RS
+.IP \[bu] 2
+Any field types that are themselves XDR structures.
+.RE
+.PP
+For debugging purposes and formats (such as JSON) that need access to
+field names, it is also possible for the \f[C]Archive\f[] type to
+receive the field names of fields that are traversed.
+The following template (in the \f[C]xdr::\f[] namespace) can be
+specialized to prepare arguments by bundling them with their names:
+.IP
+.nf
+\f[C]
+template<typename\ Archive>\ struct\ archive_adapter\ {
+\ \ template<typename\ T>\ static\ void
+\ \ apply(Archive\ &ar,\ T\ &&t,\ const\ char\ *)\ {
+\ \ \ \ ar(std::forward<T>(t));
+\ \ }
+};
+\f[]
+.fi
+.SH OPTIONS
+.TP
+.B \-hh
+Selects C++ header file output.
+This is the main output format, and its output is required for use with
+libxdrpp.
+.RS
+.RE
+.TP
+.B \-serverhh
+Generates a C++ header file containing declarations of objects you can
+use to implement a server for each interface, using
+\f[C]rpc_tcp_listener\f[].
+See the EXAMPLES section.
+.RS
+.RE
+.TP
+.B \-servercc
+Generates a .cc file containing empty method definitions corresponding
+to the object files created with \f[C]\-serverhh\f[].
+.RS
+.RE
+.PP
+\-o \f[I]outfile\f[] : Specifies the output file into which to write the
+generated code.
+The default, for \f[C]\-hh\f[], is to replace \f[C]\&.x\f[] with
+\f[C]\&.hh\f[] at the end of the input file name.
+\f[C]\-serverhh\f[] and \f[C]\-servercc\f[] append \f[C]\&.server.hh\f[]
+and \f[C]\&.server.cc\f[], respectively.
+The special \f[I]outfile\f[] \f[C]\-\f[] sends output to standard
+output.
+.TP
+.B \-DMACRO=val
+The input file is run through the C preprocessor, and this option adds
+additional defines.
+(Note that the symbol \f[C]XDRC\f[] is always defined to 1, if you wish
+to test for xdrc vs.
+other RPC compilers.)
+.RS
+.RE
+.SH EXAMPLES
+.PP
+Consider the following XDR program definition in a file myprog.x:
+.IP
+.nf
+\f[C]
+typedef\ string\ big_string<>;
+
+program\ MyProg\ {
+\ \ version\ MyProg1\ {
+\ \ \ \ void\ null(void)\ =\ 0;
+\ \ \ \ big_string\ hello(int)\ =\ 1;
+\ \ \ \ big_string\ goodbye(big_string)\ =\ 2;
+\ \ }\ =\ 1;
+}\ =\ 0x2dee1645;
+\f[]
+.fi
+.PP
+The \f[C]\-serverhh\f[] option will generate a header with the following
+class:
+.IP
+.nf
+\f[C]
+class\ MyProg1_server\ {
+public:
+\ \ using\ rpc_interface_type\ =\ MyProg1;
+
+\ \ void\ null();
+
+\ \ unique_ptr<big_string>
+\ \ hello(unique_ptr<int>\ arg);
+
+\ \ unique_ptr<big_string>
+\ \ goodbye(unique_ptr<big_string>\ arg);
+};
+\f[]
+.fi
+.PP
+You have to add any fields you need to this structure, then implement
+the three methods corresponding to the interface.
+(Note the very important type \f[C]rpc_interface_type\f[] tells the
+library which interface this object implements.) Given such an object,
+you can then implement a TCP RPC server (that registers its TCP port
+with rpcbind) as follows:
+.IP
+.nf
+\f[C]
+#include\ <xdrpp/server.h>
+#include\ "xdrpp/myprog.server.h"
+
+using\ namespace\ xdr;
+
+int
+main(int\ argc,\ char\ **argv)
+{
+\ \ MyProg1_server\ s;
+\ \ rpc_tcp_listener\ rl;
+\ \ rl.register_service(s);
+\ \ rl.run();
+\ \ return\ 1;
+}
+\f[]
+.fi
+.PP
+To implement a simple client that talks to this server, you can use code
+like the following:
+.IP
+.nf
+\f[C]
+#include\ <iostream>
+#include\ <xdrpp/srpc.h>
+#include\ "myprog.h"
+
+using\ namespace\ std;
+using\ namespace\ xdr;
+
+int
+main(int\ argc,\ char\ **argv)
+{
+\ \ unique_fd\ fd\ =\ tcp_connect_rpc(argc\ >\ 2\ ?\ argv[2]\ :\ nullptr,
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MyProg1::program,\ MyProg1::version);
+\ \ srpc_client<MyProg1>\ c{fd.get()};
+\ \ unique_ptr<big_string>\ result\ =\ c.hello(5);
+\ \ cout\ <<\ "The\ result\ of\ hello(5)\ is\ "\ <<\ *result\ <<\ endl;
+\ \ return\ 0;
+}
+\f[]
+.fi
+.SS Compilation
+.PP
+The generated \f[C]xdrc\f[] output files must be compiled with a
+compiler supporting C++11 (or later, such as C++14) and expect to be
+used with libxdrpp.
+This typically requires extra compiler flags (e.g.,
+\f[C]\-std=c++11\f[]).
+You can use pkgconfig to find the location of the headers and libraries.
+With CXX set to both g++ and clang++, the following Makefile variables
+work:
+.IP
+.nf
+\f[C]
+CXXFLAGS\ =\ \-std=c++11\ `pkg\-config\ \-\-cflags\ xdrpp`
+LIBS\ =\ `pkg\-config\ \-\-libs\ xdrpp`
+\f[]
+.fi
+.SH FILES
+.TP
+.B PREFIX/include/xdrc/types.h
+Types used in generated C++ code.
+.RS
+.RE
+.TP
+.B PREFIX/include/xdrc/cereal.h
+Integration with the cereal (http://uscilab.github.io/cereal/)
+serialization library.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+<http://tools.ietf.org/html/rfc4506>,
+<http://tools.ietf.org/html/rfc5531>
+.SH BUGS
+.PP
+Certain names that are legal in XDR cannot be used as type or field
+names.
+For example, C++ keywords are not allowed (\f[C]namespace\f[],
+\f[C]template\f[], etc.).
+In addition, \f[C]xdrc\f[] uses a number of names beginning with
+underscores (especially names beginning with prefix \f[C]_xdr_\f[]).
+Hence you should avoid starting your field names with underscore.
+Union types use private fields that have the names of the XDR fields
+with underscore appended.
+Hence, in a union you cannot use two field names one of which is the
+other with an underscore appended.
+.PP
+\f[C]xdrc\f[] translates XDR \f[C]quadruple\f[] to C++ type called
+\f[C]quadruple\f[], but most compilers do not have such a type.
+Moreover, libxdrpp does nothing to support such a type.
+.SH AUTHORS
+David Mazieres.
