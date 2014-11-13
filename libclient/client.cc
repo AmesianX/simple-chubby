@@ -63,35 +63,67 @@ Client::create(const std::string &path, const std::string &val)
     args.val = val;
 
     auto r = client->create(args);
-
-    return *r;
+    if (r->discriminant() == 1) {
+	// throw a proper exception
+	throw ClientException(static_cast<ClientError>(r->errCode()));
+    }
+    // get return value
+    return r->val();
 }
 
 bool
 Client::remove(const std::string &path)
 {
-    // TODO: Fill me in
+    auto r = client->remove(path);
+    if (r->discriminant() == 1) {
+	// throw a proper exception
+	throw ClientException(static_cast<ClientError>(r->errCode()));
+    }
+    // get return value
+    return r->val();
     return false;
 }
 
 std::string
 Client::get(const std::string &path)
 {
-    // TODO: Fill me in
-    return "";
+    auto r = client->get(path);
+    if (r->discriminant() == 1) {
+	// throw a proper exception
+	throw ClientException(static_cast<ClientError>(r->errCode()));
+    }
+    // get return value
+    return r->val();
 }
 
 void
 Client::set(const std::string &path, const std::string &val)
 {
-    // TODO: Fill me in
+    kvpair args;
+
+    args.key = path;
+    args.val = val;
+
+    auto r = client->set(args);
+    if (r->discriminant() == 1) {
+	// throw a proper exception
+	throw ClientException(static_cast<ClientError>(r->errCode()));
+    }
+    return;
 }
 
 std::set<string>
 Client::list(const string &path)
 {
-    std::set<string> r;
-    // TODO: Fill me in
-    return r;
+    std::set<string> s;
+    auto r = client->list(path); 
+    if (r->discriminant() == 1) {
+	// throw a proper exception
+	throw ClientException(static_cast<ClientError>(r->errCode()));
+    }
+    auto v = r->val(); // v is a vector of strings  
+    for (auto e : v)
+	s.insert(e);
+    return s;
 }
 

@@ -5,6 +5,7 @@
 #include "sqlite3.h"
 
 #include <set>
+#include <string>
 
 class ServerDB {
 public:
