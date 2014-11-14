@@ -1,0 +1,96 @@
+Author: Hang Qu<quhang@stanford.edu>
+
+This document presents the API exposed to Chubby users.
+
+1. The data structrue of the Chubby file systems.
+
+The Chubby file system exports a file system interface similar to, but
+simpler than that of UNIX. It consists of a strict tree of files and
+directories, as in UNIX. Both files and directories are called nodes.
+
+Each node has the following meta-data, which is stored persistently:
+(A) an instance number; greater than the instance number of any previous
+node with the same name.
+(B) a content generation number (files only); this increases when the
+file’s contents are written.
+(C) a lock generation number; this increases when the node’s lock
+transitions from free to held.
+(D) a 64-bit checksum of the file content.
+
+#include <cstdint>
+struct MetaData {
+  uint64_t instance_number;
+  uint64_t content_generation_number;
+  uint64_t lock_generation_number;
+  uint64_t file_content_checksum;
+  bool is_directory;
+};
+
+The content of a file node is a byte string, less than say 4KB.
+
+const size_t MAX_FILE_SIZE = 4096;
+typedef std::string FileContent;
+
+The content of a directory node is a list of filenames. Users should
+change the directory content through directory APIs, although operating
+on it content directly is allowed.
+
+typedef std::vector<std::string> DirectoryContent;
+
+2. API for chubby users.
+
+2.1. File handlers.
+
+A file handler is bound to a specific instance number of a file. A
+Chubby user has to provide a file handler when accessing or editing
+a file.
+
+A file handler can become invalid without the user explicitly closing
+it, when either the master changes or the file is explicitly deleted
+by other Chubby users.
+
+struct FileHandler {
+  uint64_t magic_number;  // To avoid faking file handlers.
+  uint64_t master_sequance_number;
+  std::string file_name;
+  uint64_t instance_number;
+};
+
+A file descriptor is an uint64_t on the user side that maps to a
+file handler.
+
+typedef uint64_t FileDescriptor;
+
+2.2. File system operations.
+
+const FileDescriptor FAIL = 0;
+
+// Opens a node and returns its file descriptor, return 0 if it fails
+// or the node does not exist.
+uint64_t open(const std::string& file_name);
+
+// Creates a node and return its file descriptor, return 0 if it fails
+// or the node does exist.
+uint64_t create(const std::string& file_name);
+
+// Closes the file descriptor, and further calls using the file
+// descriptor will fail.
+void close(const uint64_t file_descriptor)
+
+// Deletes a node if it has no chinldren, return false if it fails.
+// Further access of the same instance number of the file by any
+// Chubby users will be denied.
+bool delete(const std::string& file_name);
+
+// Retrieves the file content and the meta-data of a file, return false
+// if it fails.
+bool GetContentsAndStat(uint64_t file_descriptor,
+    FileContent* file_content,
+    MetaData* meta_data);
+
+// Sets the file content of a file, return false if it fails.
+bool SetContents(uint64_t file_descriptor,
+    const FileContent& file_content);
+
+2.3. Lock operations.
+
