@@ -37,6 +37,9 @@ on it content directly is allowed.
 
 typedef std::vector<std::string> DirectoryContent;
 
+A translation function between DirectoryContent and FileContent should be
+given in API.
+
 2. API for chubby users.
 
 2.1. File handlers.
@@ -54,6 +57,7 @@ struct FileHandler {
   uint64_t master_sequance_number;
   std::string file_name;
   uint64_t instance_number;
+  bool write_is_allowed;
 };
 
 A file descriptor is an uint64_t on the user side that maps to a
@@ -65,32 +69,68 @@ typedef uint64_t FileDescriptor;
 
 const FileDescriptor FAIL = 0;
 
-// Opens a node and returns its file descriptor, return 0 if it fails
-// or the node does not exist.
-uint64_t open(const std::string& file_name);
+uint64_t mode_t;
+const uint64_t READ = 0x1;
+const uint64_t WRITE = 0x2;
+const uint64_t CREATE_DIRECTORY = 0x4;
+const uint64_t CREATE_FILE = 0x8;
 
-// Creates a node and return its file descriptor, return 0 if it fails
-// or the node does exist.
-uint64_t create(const std::string& file_name);
+// Opens a node and returns its file descriptor, return FAIL if 
+// the file does not exist. Throws exception otherwise.
+FileDescriptor open(const std::string& file_name, mode_t mode);
+
+// Creates a node and return its file descriptor, return FAIL if the file
+// cannot be created because its parent directory does not exist or
+// the file does exist. Throws exception otherwise. 
+FileDescriptor create(const std::string& file_name, mode_t mode);
 
 // Closes the file descriptor, and further calls using the file
-// descriptor will fail.
-void close(const uint64_t file_descriptor)
+// descriptor will fail. Always succeeds.
+void close(uint64_t file_descriptor)
 
-// Deletes a node if it has no chinldren, return false if it fails.
+// Deletes a node if it has no children, returns false if the node does not
+// exist or cannot not be deleted because it has children. Throws exception
+// otherwise.
 // Further access of the same instance number of the file by any
 // Chubby users will be denied.
 bool delete(const std::string& file_name);
 
-// Retrieves the file content and the meta-data of a file, return false
-// if it fails.
-bool GetContentsAndStat(uint64_t file_descriptor,
+// Retrieves the file content and the meta-data of a file, returns true.
+// Throws exception otherwise.
+bool getContentsAndStat(uint64_t file_descriptor,
     FileContent* file_content,
     MetaData* meta_data);
 
-// Sets the file content of a file, return false if it fails.
-bool SetContents(uint64_t file_descriptor,
+// Sets the file content of a file, returns true.
+// Throws exception otherwise.
+bool setContents(uint64_t file_descriptor,
     const FileContent& file_content);
 
 2.3. Lock operations.
 
+Calling lock primatives requires write access to the file.
+
+// Tries to acquire the lock corresponding to the file descriptor, and
+// blocks until the lock is acuiqred.
+void acquire(uint64_t file_descriptor);
+
+// Unblocking version of "acquire". Returns true if the lock is acquired.
+bool tryAcquire(uint64_t file_descriptor);
+
+// Releases the lock coresponding to the file descriptor.
+void release(uint64_t file_descriptor);
+
+2.4. Exceptions.
+
+Exceptions are thrown during a function call when the session breaks, the
+file descriptor is illegal, access control disallows the operation, the
+file name is in illegal format, or the file is opened twice. More failure
+case to be added.
+
+If the function call successfully reaches the master, and its sematics is
+well defined, the function call should not throw exception but returns a
+failure instead.
+
+2.5. To do.
+
+Event and sequencer are not added to the API yet.
