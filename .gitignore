@@ -5,3 +5,4 @@ README.html
 include/server.h
 server/server
 shell/shell
+Makefile.local
