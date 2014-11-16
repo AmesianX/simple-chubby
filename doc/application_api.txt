@@ -2,7 +2,7 @@ Author: Hang Qu<quhang@stanford.edu>
 
 This document presents the API exposed to Chubby users.
 
-1. The data structrue of the Chubby file systems.
+1. The data structure of the Chubby file systems.
 
 The Chubby file system exports a file system interface similar to, but
 simpler than that of UNIX. It consists of a strict tree of files and
@@ -12,8 +12,8 @@ Each node has the following meta-data, which is stored persistently:
 (A) an instance number; greater than the instance number of any previous
 node with the same name.
 (B) a content generation number (files only); this increases when the
-file’s contents are written.
-(C) a lock generation number; this increases when the node’s lock
+file's contents are written.
+(C) a lock generation number; this increases when the node's lock
 transitions from free to held.
 (D) a 64-bit checksum of the file content.
 
@@ -54,7 +54,7 @@ by other Chubby users.
 
 struct FileHandler {
   uint64_t magic_number;  // To avoid faking file handlers.
-  uint64_t master_sequance_number;
+  uint64_t master_sequence_number;
   std::string file_name;
   uint64_t instance_number;
   bool write_is_allowed;
@@ -108,16 +108,16 @@ bool setContents(uint64_t file_descriptor,
 
 2.3. Lock operations.
 
-Calling lock primatives requires write access to the file.
+Calling lock primitives requires write access to the file.
 
 // Tries to acquire the lock corresponding to the file descriptor, and
-// blocks until the lock is acuiqred.
+// blocks until the lock is acquired.
 void acquire(uint64_t file_descriptor);
 
 // Unblocking version of "acquire". Returns true if the lock is acquired.
 bool tryAcquire(uint64_t file_descriptor);
 
-// Releases the lock coresponding to the file descriptor.
+// Releases the lock corresponding to the file descriptor.
 void release(uint64_t file_descriptor);
 
 2.4. Exceptions.
@@ -127,7 +127,7 @@ file descriptor is illegal, access control disallows the operation, the
 file name is in illegal format, or the file is opened twice. More failure
 case to be added.
 
-If the function call successfully reaches the master, and its sematics is
+If the function call successfully reaches the master, and its semantics is
 well defined, the function call should not throw exception but returns a
 failure instead.
 
