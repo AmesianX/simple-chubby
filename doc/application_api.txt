@@ -40,7 +40,7 @@ typedef std::vector<std::string> DirectoryContent;
 A translation function between DirectoryContent and FileContent should be
 given in API.
 
-2. API for chubby users.
+2. API for Chubby users.
 
 2.1. File handlers.
 
@@ -49,7 +49,7 @@ Chubby user has to provide a file handler when accessing or editing
 a file.
 
 A file handler can become invalid without the user explicitly closing
-it, when either the master changes or the file is explicitly deleted
+it, when either the master fails over or the file is explicitly deleted
 by other Chubby users.
 
 struct FileHandler {
@@ -60,14 +60,15 @@ struct FileHandler {
   bool write_is_allowed;
 };
 
-A file descriptor is an uint64_t on the user side that maps to a
-file handler.
+A file handler identifier is an uint64_t on the user side that maps to a
+file handler. File identifiers need not to be consistent across different
+users.
 
-typedef uint64_t FileDescriptor;
+typedef uint64_t FileHandlerId;
 
 2.2. File system operations.
 
-const FileDescriptor FAIL = 0;
+const FileHandlerId FAIL = 0;
 
 uint64_t mode_t;
 const uint64_t READ = 0x1;
@@ -75,18 +76,17 @@ const uint64_t WRITE = 0x2;
 const uint64_t CREATE_DIRECTORY = 0x4;
 const uint64_t CREATE_FILE = 0x8;
 
-// Opens a node and returns its file descriptor, return FAIL if 
-// the file does not exist. Throws exception otherwise.
-FileDescriptor open(const std::string& file_name, mode_t mode);
+// Opens or creates a node and returns its file handler identifier.
+// If CREATE_DIRECTORY or CREATE_FILE flag is set, it creates a node,
+// and returns FAIL if the node already exists.
+// If neither CREATE_DIRECTORY or CREATE_FILE flag is set, it opens a node,
+// and return FAIL if the node does not exists.
+// If both CREATE_DIRECTORY and CREATE_FILE flags are set, throw exception.
+FileHandlerId open(const std::string& file_name, mode_t mode);
 
-// Creates a node and return its file descriptor, return FAIL if the file
-// cannot be created because its parent directory does not exist or
-// the file does exist. Throws exception otherwise. 
-FileDescriptor create(const std::string& file_name, mode_t mode);
-
-// Closes the file descriptor, and further calls using the file
-// descriptor will fail. Always succeeds.
-void close(uint64_t file_descriptor)
+// Closes the file handler identifier, and further calls using the file
+// handler identifier will fail. Always succeeds.
+void close(FileHandlerId file_handler_id);
 
 // Deletes a node if it has no children, returns false if the node does not
 // exist or cannot not be deleted because it has children. Throws exception
@@ -97,35 +97,35 @@ bool delete(const std::string& file_name);
 
 // Retrieves the file content and the meta-data of a file, returns true.
 // Throws exception otherwise.
-bool getContentsAndStat(uint64_t file_descriptor,
+bool getContentsAndStat(const FileHandlerId file_handler_id,
     FileContent* file_content,
     MetaData* meta_data);
 
 // Sets the file content of a file, returns true.
 // Throws exception otherwise.
-bool setContents(uint64_t file_descriptor,
+bool setContents(const FileHandlerId file_handler_id,
     const FileContent& file_content);
 
 2.3. Lock operations.
 
 Calling lock primitives requires write access to the file.
 
-// Tries to acquire the lock corresponding to the file descriptor, and
-// blocks until the lock is acquired.
-void acquire(uint64_t file_descriptor);
+// Tries to acquire the lock corresponding to the file handler identifier,
+// and blocks until the lock is acquired.
+void acquire(const FileHandlerId file_handler_id);
 
 // Unblocking version of "acquire". Returns true if the lock is acquired.
-bool tryAcquire(uint64_t file_descriptor);
+bool tryAcquire(const FileHandlerId file_handler_id);
 
-// Releases the lock corresponding to the file descriptor.
-void release(uint64_t file_descriptor);
+// Releases the lock corresponding to the file handler identifier.
+void release(const FileHandlerId file_handler_id);
 
 2.4. Exceptions.
 
 Exceptions are thrown during a function call when the session breaks, the
-file descriptor is illegal, access control disallows the operation, the
-file name is in illegal format, or the file is opened twice. More failure
-case to be added.
+file handler identifier is illegal, access control disallows the operation,
+the file name is in illegal format, or the file is opened twice. More
+failure cases to be added.
 
 If the function call successfully reaches the master, and its semantics is
 well defined, the function call should not throw exception but returns a
