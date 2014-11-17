@@ -17,6 +17,10 @@
 struct ClientFdPair {
     uint64_t client;
     FileHandler *fd;
+
+    bool operator==(const ClientFdPair &rhs) const {
+	return client == rhs.client && fd == rhs.fd;
+    }
 };
 
 class api_v1_server {
@@ -40,6 +44,9 @@ public:
     std::unique_ptr<RetBool> release(std::unique_ptr<FileHandler> arg);
 
 private:
+    FileHandler *findFd(uint64_t client_id, const FileHandler &fd);
+    bool checkName(const std::string &file_name);
+
     ServerDB db;
     uint64_t instance_number;
     uint64_t master_sequence_number;

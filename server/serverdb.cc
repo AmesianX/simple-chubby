@@ -162,6 +162,52 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 }
 
 
+bool 
+ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
+{
+    bool file_exists = hasName(file_name);
+    if (!file_exists)
+	return false;
+
+    SQLStmt s(db, "SELECT lock_owner, instance_number, is_directory FROM fs WHERE name = \"%s\"",
+            file_name.c_str());
+
+    s.step();
+    if (!s.row()) {
+	// node does not exist
+	return false;
+    }
+
+    // check lock is held
+    uint64_t lock_owner = s.integer(0);
+    if (lock_owner != 0)
+	return false;
+
+    // check INSTANCE_NUMBER
+    uint64_t node_instance_number = s.integer(1);
+    if (node_instance_number > instance_number)
+	return false;
+
+    // check dir is empty
+    bool is_dir = s.integer(2);
+    if (is_dir){
+	// query for its children
+	SQLStmt s(db, "SELECT name FROM fs WHERE name LIKE '%s/%%'",
+		  file_name.c_str());
+	s.step();
+	if (s.row()) // if returned non-empty result
+	    return false;
+    }
+
+    // delete 
+    sqlexec("BEGIN;");
+    sqlexec("DELETE FROM fs WHERE name = \"%s\";", file_name.c_str());
+    sqlexec("COMMIT;");
+    
+    return true;
+}
+
+
 void
 ServerDB::create(const char *file)
 {
@@ -178,7 +224,7 @@ ServerDB::create(const char *file)
     string table_params = string("(") + 
 	"name TEXT PRIMARY KEY NOT NULL, " +
 	"content TEXT, " +
-	"lock_owner INT, " +
+	"lock_owner INT DEFAULT 0, " +
 	"instance_number INT, " +
 	"content_generation_number INT DEFAULT 0, " +
 	"lock_generation_number INT DEFAULT 0, " +
@@ -268,13 +314,13 @@ main(int argc, const char *argv[])
     bool r;
 
     r = s.checkAndCreate("/test", false, 1);
-    cout << "create /test ";
+    cout << "create /test (ver 1)";
     if(r)
 	cout << "succeeded." << endl;
     else cout << "failed." << endl;
 
     r = s.checkAndCreate("/test", false, 2);
-    cout << "create /test ";
+    cout << "create /test (ver 2)";
     if(r)
 	cout << "succeeded." << endl;
     else cout << "failed." << endl;
@@ -290,20 +336,39 @@ main(int argc, const char *argv[])
     if(r)
 	cout << "succeeded: instance_number = "<< n << endl;
     else cout << "failed." << endl;
-/*
-    s.set("/test", "myval");
-    s.get("/test");
-    s.set("/test", "newval");
-    s.get("/test");
-    s.set("/test/a", "");
-    s.set("/test/b", "");
-    set<string> lst = s.list("/test");
-    for (auto it = lst.begin(); it != lst.end(); it++) {
-        cout << "LIST: " << (*it) << endl;
-    }
-    if (s.hasKey("/bob"))
-        cout << "Good 'bob' not present" << endl;
-*/
+
+
+    r = s.checkAndDelete("/test/a", 1);
+    cout << "delete /test/a ";
+    if(r)
+	cout << "succeeded." << endl;
+    else cout << "failed." << endl;
+
+
+    r = s.checkAndDelete("/test", 0);
+    cout << "delete /test (ver 0)";
+    if(r)
+	cout << "succeeded." << endl;
+    else cout << "failed." << endl;
+
+    r = s.checkAndDelete("/test", 1);
+    cout << "delete /test (ver 1)";
+    if(r)
+	cout << "succeeded." << endl;
+    else cout << "failed." << endl;
+
+    r = s.checkAndCreate("/test", false, 3);
+    cout << "create /test ";
+    if(r)
+	cout << "succeeded." << endl;
+    else cout << "failed." << endl;
+
+    r = s.checkAndOpen("/test", &n);
+    cout << "open /test ";
+    if(r)
+	cout << "succeeded: instance_number = "<< n << endl;
+    else cout << "failed." << endl;
+    
 }
 
 

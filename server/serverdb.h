@@ -54,8 +54,8 @@ public:
     std::set<std::string> list(const std::string &path);
 
     /* 
-     * Creates file/dir named FILE_NAME after done checking.
-     * If IS_DIR is ture, a directory is created. Stores INSTANCE_NUMBER
+     * Creates node named FILE_NAME after done checking.
+     * If IS_DIR is ture, a directory node is created. Stores INSTANCE_NUMBER
      * in the file's meta data. 
      * The creation fails if either the file/dir already exists or the parent
      * directory doesn't exist.
@@ -66,14 +66,23 @@ public:
 
 
     /* 
-     * Opens file/dir named FILE_NAME after done checking.
-     * If IS_DIR is ture, a directory is created. 
-     * Stores the instance_number of the file/dir's meta data in INSTANCE_NUMBER.
-     * The open fails if either the file/dir doesn't exist.
+     * Opens node named FILE_NAME after done checking.
+     * Stores the instance_number of the node's meta data in INSTANCE_NUMBER.
+     * The open fails if either the node doesn't exist.
      * 
      * Return Value: true if the open succeeds, false otherwire.
      */
     bool checkAndOpen(const std::string &file_name, uint64_t *instance_number);
+
+
+    /* 
+     * Delete node named FILE_NAME after done checking.
+     * Delete fails if file/dir does not exists, dir has children, lock is held
+     * or INSTANCE_NUMBER is not larger than or equal to node's.
+     *
+     * Return Value: true if the delete succeeds, false otherwire.
+     */
+    bool checkAndDelete(const std::string &file_name, uint64_t instance_number);
 
 private:
     // Helper functions

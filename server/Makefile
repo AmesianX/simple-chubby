@@ -29,3 +29,9 @@ server/serverdb: server/sqlite3.o server/sqlstmt.o server/serverdb.o
 	rm test.db
 	server/serverdb
 
+
+server/serverimpl: server/sqlite3.o server/sqlstmt.o server/serverdb.o  server/serverimpl.o
+	$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
+	rm chubbystore.db
+	server/serverimpl
+

@@ -89,8 +89,8 @@ FileHandlerId open(const std::string& file_name, mode_t mode);
 void close(FileHandlerId file_handler_id);
 
 // Deletes a node if it has no children, returns false if the node does not
-// exist or cannot not be deleted because it has children. Throws exception
-// otherwise.
+// exist or cannot not be deleted because it has children or its lock is held. 
+// Throws exception otherwise.
 // Further access of the same instance number of the file by any
 // Chubby users will be denied.
 bool delete(FileHandlerId file_handler_id);
