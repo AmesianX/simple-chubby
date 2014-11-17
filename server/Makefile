@@ -22,3 +22,10 @@ scaffold: include/server.x xdrpp
 
 server/server: $(SERVER_OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(SERVER_OBJ) $(LIBS)
+
+# test serverdb
+server/serverdb: server/sqlite3.o server/sqlstmt.o server/serverdb.o
+	$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
+	rm test.db
+	server/serverdb
+

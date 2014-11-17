@@ -93,7 +93,7 @@ void close(FileHandlerId file_handler_id);
 // otherwise.
 // Further access of the same instance number of the file by any
 // Chubby users will be denied.
-bool delete(const std::string& file_name);
+bool delete(FileHandlerId file_handler_id);
 
 // Retrieves the file content and the meta-data of a file, returns true.
 // Throws exception otherwise.

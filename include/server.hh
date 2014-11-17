@@ -9,9 +9,173 @@
 
 using longstring = xdr::xstring<>;
 using ErrorCode = std::uint32_t;
-using SetString = xdr::xvector<longstring>;
+using Mode = std::uint64_t;
 
-struct RPCBool {
+struct MetaData {
+  std::uint64_t instance_number{};
+  std::uint64_t content_generation_number{};
+  std::uint64_t lock_generation_number{};
+  std::uint64_t file_content_checksum{};
+  bool is_directory{};
+};
+namespace xdr {
+template<> struct xdr_traits<::MetaData>
+  : xdr_struct_base<field_ptr<::MetaData,
+                              decltype(::MetaData::instance_number),
+                              &::MetaData::instance_number>,
+                    field_ptr<::MetaData,
+                              decltype(::MetaData::content_generation_number),
+                              &::MetaData::content_generation_number>,
+                    field_ptr<::MetaData,
+                              decltype(::MetaData::lock_generation_number),
+                              &::MetaData::lock_generation_number>,
+                    field_ptr<::MetaData,
+                              decltype(::MetaData::file_content_checksum),
+                              &::MetaData::file_content_checksum>,
+                    field_ptr<::MetaData,
+                              decltype(::MetaData::is_directory),
+                              &::MetaData::is_directory>> {
+  template<typename Archive> static void
+  save(Archive &ar, const ::MetaData &obj) {
+    archive(ar, obj.instance_number, "instance_number");
+    archive(ar, obj.content_generation_number, "content_generation_number");
+    archive(ar, obj.lock_generation_number, "lock_generation_number");
+    archive(ar, obj.file_content_checksum, "file_content_checksum");
+    archive(ar, obj.is_directory, "is_directory");
+  }
+  template<typename Archive> static void
+  load(Archive &ar, ::MetaData &obj) {
+    archive(ar, obj.instance_number, "instance_number");
+    archive(ar, obj.content_generation_number, "content_generation_number");
+    archive(ar, obj.lock_generation_number, "lock_generation_number");
+    archive(ar, obj.file_content_checksum, "file_content_checksum");
+    archive(ar, obj.is_directory, "is_directory");
+  }
+};
+}
+
+using FileContent = longstring;
+using DirectoryContent = xdr::xvector<longstring>;
+
+struct FileHandler {
+  std::uint64_t magic_number{};
+  std::uint64_t master_sequence_number{};
+  longstring file_name{};
+  std::uint64_t instance_number{};
+  bool write_is_allowed{};
+};
+namespace xdr {
+template<> struct xdr_traits<::FileHandler>
+  : xdr_struct_base<field_ptr<::FileHandler,
+                              decltype(::FileHandler::magic_number),
+                              &::FileHandler::magic_number>,
+                    field_ptr<::FileHandler,
+                              decltype(::FileHandler::master_sequence_number),
+                              &::FileHandler::master_sequence_number>,
+                    field_ptr<::FileHandler,
+                              decltype(::FileHandler::file_name),
+                              &::FileHandler::file_name>,
+                    field_ptr<::FileHandler,
+                              decltype(::FileHandler::instance_number),
+                              &::FileHandler::instance_number>,
+                    field_ptr<::FileHandler,
+                              decltype(::FileHandler::write_is_allowed),
+                              &::FileHandler::write_is_allowed>> {
+  template<typename Archive> static void
+  save(Archive &ar, const ::FileHandler &obj) {
+    archive(ar, obj.magic_number, "magic_number");
+    archive(ar, obj.master_sequence_number, "master_sequence_number");
+    archive(ar, obj.file_name, "file_name");
+    archive(ar, obj.instance_number, "instance_number");
+    archive(ar, obj.write_is_allowed, "write_is_allowed");
+  }
+  template<typename Archive> static void
+  load(Archive &ar, ::FileHandler &obj) {
+    archive(ar, obj.magic_number, "magic_number");
+    archive(ar, obj.master_sequence_number, "master_sequence_number");
+    archive(ar, obj.file_name, "file_name");
+    archive(ar, obj.instance_number, "instance_number");
+    archive(ar, obj.write_is_allowed, "write_is_allowed");
+  }
+};
+}
+
+struct ArgOpen {
+  longstring name{};
+  Mode mode{};
+};
+namespace xdr {
+template<> struct xdr_traits<::ArgOpen>
+  : xdr_struct_base<field_ptr<::ArgOpen,
+                              decltype(::ArgOpen::name),
+                              &::ArgOpen::name>,
+                    field_ptr<::ArgOpen,
+                              decltype(::ArgOpen::mode),
+                              &::ArgOpen::mode>> {
+  template<typename Archive> static void
+  save(Archive &ar, const ::ArgOpen &obj) {
+    archive(ar, obj.name, "name");
+    archive(ar, obj.mode, "mode");
+  }
+  template<typename Archive> static void
+  load(Archive &ar, ::ArgOpen &obj) {
+    archive(ar, obj.name, "name");
+    archive(ar, obj.mode, "mode");
+  }
+};
+}
+
+struct ArgSetContents {
+  FileHandler fd{};
+  FileContent content{};
+};
+namespace xdr {
+template<> struct xdr_traits<::ArgSetContents>
+  : xdr_struct_base<field_ptr<::ArgSetContents,
+                              decltype(::ArgSetContents::fd),
+                              &::ArgSetContents::fd>,
+                    field_ptr<::ArgSetContents,
+                              decltype(::ArgSetContents::content),
+                              &::ArgSetContents::content>> {
+  template<typename Archive> static void
+  save(Archive &ar, const ::ArgSetContents &obj) {
+    archive(ar, obj.fd, "fd");
+    archive(ar, obj.content, "content");
+  }
+  template<typename Archive> static void
+  load(Archive &ar, ::ArgSetContents &obj) {
+    archive(ar, obj.fd, "fd");
+    archive(ar, obj.content, "content");
+  }
+};
+}
+
+struct ContentsAndStat {
+  FileContent content{};
+  MetaData stat{};
+};
+namespace xdr {
+template<> struct xdr_traits<::ContentsAndStat>
+  : xdr_struct_base<field_ptr<::ContentsAndStat,
+                              decltype(::ContentsAndStat::content),
+                              &::ContentsAndStat::content>,
+                    field_ptr<::ContentsAndStat,
+                              decltype(::ContentsAndStat::stat),
+                              &::ContentsAndStat::stat>> {
+  template<typename Archive> static void
+  save(Archive &ar, const ::ContentsAndStat &obj) {
+    archive(ar, obj.content, "content");
+    archive(ar, obj.stat, "stat");
+  }
+  template<typename Archive> static void
+  load(Archive &ar, ::ContentsAndStat &obj) {
+    archive(ar, obj.content, "content");
+    archive(ar, obj.stat, "stat");
+  }
+};
+}
+
+struct RetBool {
 private:
   std::uint32_t discriminant_;
   union {
@@ -31,10 +195,10 @@ public:
   _xdr_with_mem_ptr(_F &_f, std::uint32_t which, A&&...a) {
     switch (which) {
     case 0:
-      _f(&RPCBool::val_, std::forward<A>(a)...);
+      _f(&RetBool::val_, std::forward<A>(a)...);
       return true;
     case 1:
-      _f(&RPCBool::errCode_, std::forward<A>(a)...);
+      _f(&RetBool::errCode_, std::forward<A>(a)...);
       return true;
     default:
       return true;
@@ -45,43 +209,43 @@ public:
   void _xdr_discriminant(std::uint32_t which, bool validate = true) {
     int fnum = _xdr_field_number(which);
     if (fnum < 0 && validate)
-      throw xdr::xdr_bad_discriminant("bad value of discriminant in RPCBool");
+      throw xdr::xdr_bad_discriminant("bad value of discriminant in RetBool");
     if (fnum != _xdr_field_number(discriminant_)) {
-      this->~RPCBool();
+      this->~RetBool();
       discriminant_ = which;
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this);
     }
   }
-  RPCBool(std::uint32_t which = std::uint32_t{}) : discriminant_(which) {
+  RetBool(std::uint32_t which = std::uint32_t{}) : discriminant_(which) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this);
   }
-  RPCBool(const RPCBool &source) : discriminant_(source.discriminant_) {
+  RetBool(const RetBool &source) : discriminant_(source.discriminant_) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this, source);
   }
-  RPCBool(RPCBool &&source) : discriminant_(source.discriminant_) {
+  RetBool(RetBool &&source) : discriminant_(source.discriminant_) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this,
                       std::move(source));
   }
-  ~RPCBool() { _xdr_with_mem_ptr(xdr::field_destructor, discriminant_, *this); }
-  RPCBool &operator=(const RPCBool &source) {
+  ~RetBool() { _xdr_with_mem_ptr(xdr::field_destructor, discriminant_, *this); }
+  RetBool &operator=(const RetBool &source) {
     if (_xdr_field_number(discriminant_) 
         == _xdr_field_number(source.discriminant_))
       _xdr_with_mem_ptr(xdr::field_assigner, discriminant_, *this, source);
     else {
-      this->~RPCBool();
+      this->~RetBool();
       discriminant_ = std::uint32_t(-1);
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this, source);
     }
     discriminant_ = source.discriminant_;
     return *this;
   }
-  RPCBool &operator=(RPCBool &&source) {
+  RetBool &operator=(RetBool &&source) {
     if (_xdr_field_number(discriminant_)
          == _xdr_field_number(source.discriminant_))
       _xdr_with_mem_ptr(xdr::field_assigner, discriminant_, *this,
                         std::move(source));
     else {
-      this->~RPCBool();
+      this->~RetBool();
       discriminant_ = std::uint32_t(-1);
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this,
                         std::move(source));
@@ -91,7 +255,7 @@ public:
   }
 
   std::uint32_t discriminant() const { return std::uint32_t(discriminant_); }
-  RPCBool &discriminant(unsigned _xdr_d, bool _xdr_validate = true) {
+  RetBool &discriminant(unsigned _xdr_d, bool _xdr_validate = true) {
     _xdr_discriminant(_xdr_d, _xdr_validate);
     return *this;
   }
@@ -99,31 +263,31 @@ public:
   bool &val() {
     if (_xdr_field_number(discriminant_) == 1)
       return val_;
-    throw xdr::xdr_wrong_union("RPCBool: val accessed when not selected");
+    throw xdr::xdr_wrong_union("RetBool: val accessed when not selected");
   }
   const bool &val() const {
     if (_xdr_field_number(discriminant_) == 1)
       return val_;
-    throw xdr::xdr_wrong_union("RPCBool: val accessed when not selected");
+    throw xdr::xdr_wrong_union("RetBool: val accessed when not selected");
   }
   ErrorCode &errCode() {
     if (_xdr_field_number(discriminant_) == 2)
       return errCode_;
-    throw xdr::xdr_wrong_union("RPCBool: errCode accessed when not selected");
+    throw xdr::xdr_wrong_union("RetBool: errCode accessed when not selected");
   }
   const ErrorCode &errCode() const {
     if (_xdr_field_number(discriminant_) == 2)
       return errCode_;
-    throw xdr::xdr_wrong_union("RPCBool: errCode accessed when not selected");
+    throw xdr::xdr_wrong_union("RetBool: errCode accessed when not selected");
   }
 };
 namespace xdr {
-template<> struct xdr_traits<::RPCBool> : xdr_traits_base {
+template<> struct xdr_traits<::RetBool> : xdr_traits_base {
   static constexpr bool is_class = true;
   static constexpr bool is_union = true;
   static constexpr bool has_fixed_size = false;
 
-  using union_type = ::RPCBool;
+  using union_type = ::RetBool;
   using discriminant_type = decltype(std::declval<union_type>().discriminant());
 
   static constexpr const char *union_field_name(std::uint32_t which) {
@@ -135,21 +299,21 @@ template<> struct xdr_traits<::RPCBool> : xdr_traits_base {
     return union_field_name(u._xdr_discriminant());
   }
 
-  static std::size_t serial_size(const ::RPCBool &obj) {
+  static std::size_t serial_size(const ::RetBool &obj) {
     std::size_t size = 0;
     if (!obj._xdr_with_mem_ptr(field_size, obj._xdr_discriminant(), obj, size))
-      throw xdr_bad_discriminant("bad value of discriminant in RPCBool");
+      throw xdr_bad_discriminant("bad value of discriminant in RetBool");
     return size + 4;
   }
   template<typename Archive> static void
-  save(Archive &ar, const ::RPCBool &obj) {
+  save(Archive &ar, const ::RetBool &obj) {
     xdr::archive(ar, obj.discriminant(), "discriminant");
     if (!obj._xdr_with_mem_ptr(field_archiver, obj.discriminant(), ar, obj,
                                union_field_name(obj)))
-      throw xdr_bad_discriminant("bad value of discriminant in RPCBool");
+      throw xdr_bad_discriminant("bad value of discriminant in RetBool");
   }
   template<typename Archive> static void
-  load(Archive &ar, ::RPCBool &obj) {
+  load(Archive &ar, ::RetBool &obj) {
     discriminant_type which;
     xdr::archive(ar, which, "discriminant");
     obj.discriminant(which);
@@ -159,11 +323,11 @@ template<> struct xdr_traits<::RPCBool> : xdr_traits_base {
 };
 }
 
-struct RPCString {
+struct RetFd {
 private:
   std::uint32_t discriminant_;
   union {
-    xdr::xstring<> val_;
+    FileHandler val_;
     ErrorCode errCode_;
   };
 
@@ -179,10 +343,10 @@ public:
   _xdr_with_mem_ptr(_F &_f, std::uint32_t which, A&&...a) {
     switch (which) {
     case 0:
-      _f(&RPCString::val_, std::forward<A>(a)...);
+      _f(&RetFd::val_, std::forward<A>(a)...);
       return true;
     case 1:
-      _f(&RPCString::errCode_, std::forward<A>(a)...);
+      _f(&RetFd::errCode_, std::forward<A>(a)...);
       return true;
     default:
       return true;
@@ -193,43 +357,43 @@ public:
   void _xdr_discriminant(std::uint32_t which, bool validate = true) {
     int fnum = _xdr_field_number(which);
     if (fnum < 0 && validate)
-      throw xdr::xdr_bad_discriminant("bad value of discriminant in RPCString");
+      throw xdr::xdr_bad_discriminant("bad value of discriminant in RetFd");
     if (fnum != _xdr_field_number(discriminant_)) {
-      this->~RPCString();
+      this->~RetFd();
       discriminant_ = which;
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this);
     }
   }
-  RPCString(std::uint32_t which = std::uint32_t{}) : discriminant_(which) {
+  RetFd(std::uint32_t which = std::uint32_t{}) : discriminant_(which) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this);
   }
-  RPCString(const RPCString &source) : discriminant_(source.discriminant_) {
+  RetFd(const RetFd &source) : discriminant_(source.discriminant_) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this, source);
   }
-  RPCString(RPCString &&source) : discriminant_(source.discriminant_) {
+  RetFd(RetFd &&source) : discriminant_(source.discriminant_) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this,
                       std::move(source));
   }
-  ~RPCString() { _xdr_with_mem_ptr(xdr::field_destructor, discriminant_, *this); }
-  RPCString &operator=(const RPCString &source) {
+  ~RetFd() { _xdr_with_mem_ptr(xdr::field_destructor, discriminant_, *this); }
+  RetFd &operator=(const RetFd &source) {
     if (_xdr_field_number(discriminant_) 
         == _xdr_field_number(source.discriminant_))
       _xdr_with_mem_ptr(xdr::field_assigner, discriminant_, *this, source);
     else {
-      this->~RPCString();
+      this->~RetFd();
       discriminant_ = std::uint32_t(-1);
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this, source);
     }
     discriminant_ = source.discriminant_;
     return *this;
   }
-  RPCString &operator=(RPCString &&source) {
+  RetFd &operator=(RetFd &&source) {
     if (_xdr_field_number(discriminant_)
          == _xdr_field_number(source.discriminant_))
       _xdr_with_mem_ptr(xdr::field_assigner, discriminant_, *this,
                         std::move(source));
     else {
-      this->~RPCString();
+      this->~RetFd();
       discriminant_ = std::uint32_t(-1);
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this,
                         std::move(source));
@@ -239,39 +403,39 @@ public:
   }
 
   std::uint32_t discriminant() const { return std::uint32_t(discriminant_); }
-  RPCString &discriminant(unsigned _xdr_d, bool _xdr_validate = true) {
+  RetFd &discriminant(unsigned _xdr_d, bool _xdr_validate = true) {
     _xdr_discriminant(_xdr_d, _xdr_validate);
     return *this;
   }
 
-  xdr::xstring<> &val() {
+  FileHandler &val() {
     if (_xdr_field_number(discriminant_) == 1)
       return val_;
-    throw xdr::xdr_wrong_union("RPCString: val accessed when not selected");
+    throw xdr::xdr_wrong_union("RetFd: val accessed when not selected");
   }
-  const xdr::xstring<> &val() const {
+  const FileHandler &val() const {
     if (_xdr_field_number(discriminant_) == 1)
       return val_;
-    throw xdr::xdr_wrong_union("RPCString: val accessed when not selected");
+    throw xdr::xdr_wrong_union("RetFd: val accessed when not selected");
   }
   ErrorCode &errCode() {
     if (_xdr_field_number(discriminant_) == 2)
       return errCode_;
-    throw xdr::xdr_wrong_union("RPCString: errCode accessed when not selected");
+    throw xdr::xdr_wrong_union("RetFd: errCode accessed when not selected");
   }
   const ErrorCode &errCode() const {
     if (_xdr_field_number(discriminant_) == 2)
       return errCode_;
-    throw xdr::xdr_wrong_union("RPCString: errCode accessed when not selected");
+    throw xdr::xdr_wrong_union("RetFd: errCode accessed when not selected");
   }
 };
 namespace xdr {
-template<> struct xdr_traits<::RPCString> : xdr_traits_base {
+template<> struct xdr_traits<::RetFd> : xdr_traits_base {
   static constexpr bool is_class = true;
   static constexpr bool is_union = true;
   static constexpr bool has_fixed_size = false;
 
-  using union_type = ::RPCString;
+  using union_type = ::RetFd;
   using discriminant_type = decltype(std::declval<union_type>().discriminant());
 
   static constexpr const char *union_field_name(std::uint32_t which) {
@@ -283,21 +447,21 @@ template<> struct xdr_traits<::RPCString> : xdr_traits_base {
     return union_field_name(u._xdr_discriminant());
   }
 
-  static std::size_t serial_size(const ::RPCString &obj) {
+  static std::size_t serial_size(const ::RetFd &obj) {
     std::size_t size = 0;
     if (!obj._xdr_with_mem_ptr(field_size, obj._xdr_discriminant(), obj, size))
-      throw xdr_bad_discriminant("bad value of discriminant in RPCString");
+      throw xdr_bad_discriminant("bad value of discriminant in RetFd");
     return size + 4;
   }
   template<typename Archive> static void
-  save(Archive &ar, const ::RPCString &obj) {
+  save(Archive &ar, const ::RetFd &obj) {
     xdr::archive(ar, obj.discriminant(), "discriminant");
     if (!obj._xdr_with_mem_ptr(field_archiver, obj.discriminant(), ar, obj,
                                union_field_name(obj)))
-      throw xdr_bad_discriminant("bad value of discriminant in RPCString");
+      throw xdr_bad_discriminant("bad value of discriminant in RetFd");
   }
   template<typename Archive> static void
-  load(Archive &ar, ::RPCString &obj) {
+  load(Archive &ar, ::RetFd &obj) {
     discriminant_type which;
     xdr::archive(ar, which, "discriminant");
     obj.discriminant(which);
@@ -307,11 +471,11 @@ template<> struct xdr_traits<::RPCString> : xdr_traits_base {
 };
 }
 
-struct RPCSet {
+struct RetContentsAndStat {
 private:
   std::uint32_t discriminant_;
   union {
-    SetString val_;
+    ContentsAndStat val_;
     ErrorCode errCode_;
   };
 
@@ -327,10 +491,10 @@ public:
   _xdr_with_mem_ptr(_F &_f, std::uint32_t which, A&&...a) {
     switch (which) {
     case 0:
-      _f(&RPCSet::val_, std::forward<A>(a)...);
+      _f(&RetContentsAndStat::val_, std::forward<A>(a)...);
       return true;
     case 1:
-      _f(&RPCSet::errCode_, std::forward<A>(a)...);
+      _f(&RetContentsAndStat::errCode_, std::forward<A>(a)...);
       return true;
     default:
       return true;
@@ -341,43 +505,43 @@ public:
   void _xdr_discriminant(std::uint32_t which, bool validate = true) {
     int fnum = _xdr_field_number(which);
     if (fnum < 0 && validate)
-      throw xdr::xdr_bad_discriminant("bad value of discriminant in RPCSet");
+      throw xdr::xdr_bad_discriminant("bad value of discriminant in RetContentsAndStat");
     if (fnum != _xdr_field_number(discriminant_)) {
-      this->~RPCSet();
+      this->~RetContentsAndStat();
       discriminant_ = which;
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this);
     }
   }
-  RPCSet(std::uint32_t which = std::uint32_t{}) : discriminant_(which) {
+  RetContentsAndStat(std::uint32_t which = std::uint32_t{}) : discriminant_(which) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this);
   }
-  RPCSet(const RPCSet &source) : discriminant_(source.discriminant_) {
+  RetContentsAndStat(const RetContentsAndStat &source) : discriminant_(source.discriminant_) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this, source);
   }
-  RPCSet(RPCSet &&source) : discriminant_(source.discriminant_) {
+  RetContentsAndStat(RetContentsAndStat &&source) : discriminant_(source.discriminant_) {
     _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this,
                       std::move(source));
   }
-  ~RPCSet() { _xdr_with_mem_ptr(xdr::field_destructor, discriminant_, *this); }
-  RPCSet &operator=(const RPCSet &source) {
+  ~RetContentsAndStat() { _xdr_with_mem_ptr(xdr::field_destructor, discriminant_, *this); }
+  RetContentsAndStat &operator=(const RetContentsAndStat &source) {
     if (_xdr_field_number(discriminant_) 
         == _xdr_field_number(source.discriminant_))
       _xdr_with_mem_ptr(xdr::field_assigner, discriminant_, *this, source);
     else {
-      this->~RPCSet();
+      this->~RetContentsAndStat();
       discriminant_ = std::uint32_t(-1);
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this, source);
     }
     discriminant_ = source.discriminant_;
     return *this;
   }
-  RPCSet &operator=(RPCSet &&source) {
+  RetContentsAndStat &operator=(RetContentsAndStat &&source) {
     if (_xdr_field_number(discriminant_)
          == _xdr_field_number(source.discriminant_))
       _xdr_with_mem_ptr(xdr::field_assigner, discriminant_, *this,
                         std::move(source));
     else {
-      this->~RPCSet();
+      this->~RetContentsAndStat();
       discriminant_ = std::uint32_t(-1);
       _xdr_with_mem_ptr(xdr::field_constructor, discriminant_, *this,
                         std::move(source));
@@ -387,39 +551,39 @@ public:
   }
 
   std::uint32_t discriminant() const { return std::uint32_t(discriminant_); }
-  RPCSet &discriminant(unsigned _xdr_d, bool _xdr_validate = true) {
+  RetContentsAndStat &discriminant(unsigned _xdr_d, bool _xdr_validate = true) {
     _xdr_discriminant(_xdr_d, _xdr_validate);
     return *this;
   }
 
-  SetString &val() {
+  ContentsAndStat &val() {
     if (_xdr_field_number(discriminant_) == 1)
       return val_;
-    throw xdr::xdr_wrong_union("RPCSet: val accessed when not selected");
+    throw xdr::xdr_wrong_union("RetContentsAndStat: val accessed when not selected");
   }
-  const SetString &val() const {
+  const ContentsAndStat &val() const {
     if (_xdr_field_number(discriminant_) == 1)
       return val_;
-    throw xdr::xdr_wrong_union("RPCSet: val accessed when not selected");
+    throw xdr::xdr_wrong_union("RetContentsAndStat: val accessed when not selected");
   }
   ErrorCode &errCode() {
     if (_xdr_field_number(discriminant_) == 2)
       return errCode_;
-    throw xdr::xdr_wrong_union("RPCSet: errCode accessed when not selected");
+    throw xdr::xdr_wrong_union("RetContentsAndStat: errCode accessed when not selected");
   }
   const ErrorCode &errCode() const {
     if (_xdr_field_number(discriminant_) == 2)
       return errCode_;
-    throw xdr::xdr_wrong_union("RPCSet: errCode accessed when not selected");
+    throw xdr::xdr_wrong_union("RetContentsAndStat: errCode accessed when not selected");
   }
 };
 namespace xdr {
-template<> struct xdr_traits<::RPCSet> : xdr_traits_base {
+template<> struct xdr_traits<::RetContentsAndStat> : xdr_traits_base {
   static constexpr bool is_class = true;
   static constexpr bool is_union = true;
   static constexpr bool has_fixed_size = false;
 
-  using union_type = ::RPCSet;
+  using union_type = ::RetContentsAndStat;
   using discriminant_type = decltype(std::declval<union_type>().discriminant());
 
   static constexpr const char *union_field_name(std::uint32_t which) {
@@ -431,51 +595,26 @@ template<> struct xdr_traits<::RPCSet> : xdr_traits_base {
     return union_field_name(u._xdr_discriminant());
   }
 
-  static std::size_t serial_size(const ::RPCSet &obj) {
+  static std::size_t serial_size(const ::RetContentsAndStat &obj) {
     std::size_t size = 0;
     if (!obj._xdr_with_mem_ptr(field_size, obj._xdr_discriminant(), obj, size))
-      throw xdr_bad_discriminant("bad value of discriminant in RPCSet");
+      throw xdr_bad_discriminant("bad value of discriminant in RetContentsAndStat");
     return size + 4;
   }
   template<typename Archive> static void
-  save(Archive &ar, const ::RPCSet &obj) {
+  save(Archive &ar, const ::RetContentsAndStat &obj) {
     xdr::archive(ar, obj.discriminant(), "discriminant");
     if (!obj._xdr_with_mem_ptr(field_archiver, obj.discriminant(), ar, obj,
                                union_field_name(obj)))
-      throw xdr_bad_discriminant("bad value of discriminant in RPCSet");
+      throw xdr_bad_discriminant("bad value of discriminant in RetContentsAndStat");
   }
   template<typename Archive> static void
-  load(Archive &ar, ::RPCSet &obj) {
+  load(Archive &ar, ::RetContentsAndStat &obj) {
     discriminant_type which;
     xdr::archive(ar, which, "discriminant");
     obj.discriminant(which);
     obj._xdr_with_mem_ptr(field_archiver, obj.discriminant(), ar, obj,
                           union_field_name(which));
-  }
-};
-}
-
-struct kvpair {
-  xdr::xstring<512> key{};
-  xdr::xstring<> val{};
-};
-namespace xdr {
-template<> struct xdr_traits<::kvpair>
-  : xdr_struct_base<field_ptr<::kvpair,
-                              decltype(::kvpair::key),
-                              &::kvpair::key>,
-                    field_ptr<::kvpair,
-                              decltype(::kvpair::val),
-                              &::kvpair::val>> {
-  template<typename Archive> static void
-  save(Archive &ar, const ::kvpair &obj) {
-    archive(ar, obj.key, "key");
-    archive(ar, obj.val, "val");
-  }
-  template<typename Archive> static void
-  load(Archive &ar, ::kvpair &obj) {
-    archive(ar, obj.key, "key");
-    archive(ar, obj.val, "val");
   }
 };
 }
@@ -486,113 +625,179 @@ struct api_v1 {
   static constexpr std::uint32_t version = 1;
   static constexpr const char *version_name = "api_v1";
 
-  struct create_t {
+  struct fileOpen_t {
     using interface_type = api_v1;
     static constexpr std::uint32_t proc = 1;
-    static constexpr const char *proc_name = "create";
-    using arg_type = kvpair;
-    using arg_wire_type = kvpair;
-    using res_type = RPCBool;
-    using res_wire_type = RPCBool;
+    static constexpr const char *proc_name = "fileOpen";
+    using arg_type = ArgOpen;
+    using arg_wire_type = ArgOpen;
+    using res_type = RetFd;
+    using res_wire_type = RetFd;
     
     template<typename C, typename...A> static auto
     dispatch(C &&c, A &&...a) ->
-    decltype(c.create(std::forward<A>(a)...)) {
-      return c.create(std::forward<A>(a)...);
+    decltype(c.fileOpen(std::forward<A>(a)...)) {
+      return c.fileOpen(std::forward<A>(a)...);
     }
     
     template<typename C, typename DropIfVoid, typename...A> static auto
     dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
-    decltype(c.create(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
-      return c.create(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    decltype(c.fileOpen(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.fileOpen(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
     }
   };
 
-  struct remove_t {
+  struct fileClose_t {
     using interface_type = api_v1;
     static constexpr std::uint32_t proc = 2;
-    static constexpr const char *proc_name = "remove";
-    using arg_type = longstring;
-    using arg_wire_type = longstring;
-    using res_type = RPCBool;
-    using res_wire_type = RPCBool;
+    static constexpr const char *proc_name = "fileClose";
+    using arg_type = FileHandler;
+    using arg_wire_type = FileHandler;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
     
     template<typename C, typename...A> static auto
     dispatch(C &&c, A &&...a) ->
-    decltype(c.remove(std::forward<A>(a)...)) {
-      return c.remove(std::forward<A>(a)...);
+    decltype(c.fileClose(std::forward<A>(a)...)) {
+      return c.fileClose(std::forward<A>(a)...);
     }
     
     template<typename C, typename DropIfVoid, typename...A> static auto
     dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
-    decltype(c.remove(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
-      return c.remove(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    decltype(c.fileClose(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.fileClose(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
     }
   };
 
-  struct get_t {
+  struct fileDelete_t {
     using interface_type = api_v1;
     static constexpr std::uint32_t proc = 3;
-    static constexpr const char *proc_name = "get";
-    using arg_type = longstring;
-    using arg_wire_type = longstring;
-    using res_type = RPCString;
-    using res_wire_type = RPCString;
+    static constexpr const char *proc_name = "fileDelete";
+    using arg_type = FileHandler;
+    using arg_wire_type = FileHandler;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
     
     template<typename C, typename...A> static auto
     dispatch(C &&c, A &&...a) ->
-    decltype(c.get(std::forward<A>(a)...)) {
-      return c.get(std::forward<A>(a)...);
+    decltype(c.fileDelete(std::forward<A>(a)...)) {
+      return c.fileDelete(std::forward<A>(a)...);
     }
     
     template<typename C, typename DropIfVoid, typename...A> static auto
     dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
-    decltype(c.get(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
-      return c.get(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    decltype(c.fileDelete(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.fileDelete(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
     }
   };
 
-  struct set_t {
+  struct getContentsAndStat_t {
     using interface_type = api_v1;
     static constexpr std::uint32_t proc = 4;
-    static constexpr const char *proc_name = "set";
-    using arg_type = kvpair;
-    using arg_wire_type = kvpair;
-    using res_type = RPCBool;
-    using res_wire_type = RPCBool;
+    static constexpr const char *proc_name = "getContentsAndStat";
+    using arg_type = FileHandler;
+    using arg_wire_type = FileHandler;
+    using res_type = RetContentsAndStat;
+    using res_wire_type = RetContentsAndStat;
     
     template<typename C, typename...A> static auto
     dispatch(C &&c, A &&...a) ->
-    decltype(c.set(std::forward<A>(a)...)) {
-      return c.set(std::forward<A>(a)...);
+    decltype(c.getContentsAndStat(std::forward<A>(a)...)) {
+      return c.getContentsAndStat(std::forward<A>(a)...);
     }
     
     template<typename C, typename DropIfVoid, typename...A> static auto
     dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
-    decltype(c.set(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
-      return c.set(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    decltype(c.getContentsAndStat(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.getContentsAndStat(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
     }
   };
 
-  struct list_t {
+  struct setContents_t {
     using interface_type = api_v1;
     static constexpr std::uint32_t proc = 5;
-    static constexpr const char *proc_name = "list";
-    using arg_type = longstring;
-    using arg_wire_type = longstring;
-    using res_type = RPCSet;
-    using res_wire_type = RPCSet;
+    static constexpr const char *proc_name = "setContents";
+    using arg_type = ArgSetContents;
+    using arg_wire_type = ArgSetContents;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
     
     template<typename C, typename...A> static auto
     dispatch(C &&c, A &&...a) ->
-    decltype(c.list(std::forward<A>(a)...)) {
-      return c.list(std::forward<A>(a)...);
+    decltype(c.setContents(std::forward<A>(a)...)) {
+      return c.setContents(std::forward<A>(a)...);
     }
     
     template<typename C, typename DropIfVoid, typename...A> static auto
     dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
-    decltype(c.list(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
-      return c.list(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    decltype(c.setContents(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.setContents(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    }
+  };
+
+  struct acquire_t {
+    using interface_type = api_v1;
+    static constexpr std::uint32_t proc = 6;
+    static constexpr const char *proc_name = "acquire";
+    using arg_type = FileHandler;
+    using arg_wire_type = FileHandler;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
+    
+    template<typename C, typename...A> static auto
+    dispatch(C &&c, A &&...a) ->
+    decltype(c.acquire(std::forward<A>(a)...)) {
+      return c.acquire(std::forward<A>(a)...);
+    }
+    
+    template<typename C, typename DropIfVoid, typename...A> static auto
+    dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
+    decltype(c.acquire(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.acquire(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    }
+  };
+
+  struct tryAcquire_t {
+    using interface_type = api_v1;
+    static constexpr std::uint32_t proc = 7;
+    static constexpr const char *proc_name = "tryAcquire";
+    using arg_type = FileHandler;
+    using arg_wire_type = FileHandler;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
+    
+    template<typename C, typename...A> static auto
+    dispatch(C &&c, A &&...a) ->
+    decltype(c.tryAcquire(std::forward<A>(a)...)) {
+      return c.tryAcquire(std::forward<A>(a)...);
+    }
+    
+    template<typename C, typename DropIfVoid, typename...A> static auto
+    dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
+    decltype(c.tryAcquire(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.tryAcquire(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    }
+  };
+
+  struct release_t {
+    using interface_type = api_v1;
+    static constexpr std::uint32_t proc = 8;
+    static constexpr const char *proc_name = "release";
+    using arg_type = FileHandler;
+    using arg_wire_type = FileHandler;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
+    
+    template<typename C, typename...A> static auto
+    dispatch(C &&c, A &&...a) ->
+    decltype(c.release(std::forward<A>(a)...)) {
+      return c.release(std::forward<A>(a)...);
+    }
+    
+    template<typename C, typename DropIfVoid, typename...A> static auto
+    dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
+    decltype(c.release(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.release(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
     }
   };
 
@@ -600,19 +805,28 @@ struct api_v1 {
   call_dispatch(T &&t, std::uint32_t proc, A &&...a) {
     switch(proc) {
     case 1:
-      t.template dispatch<create_t>(std::forward<A>(a)...);
+      t.template dispatch<fileOpen_t>(std::forward<A>(a)...);
       return true;
     case 2:
-      t.template dispatch<remove_t>(std::forward<A>(a)...);
+      t.template dispatch<fileClose_t>(std::forward<A>(a)...);
       return true;
     case 3:
-      t.template dispatch<get_t>(std::forward<A>(a)...);
+      t.template dispatch<fileDelete_t>(std::forward<A>(a)...);
       return true;
     case 4:
-      t.template dispatch<set_t>(std::forward<A>(a)...);
+      t.template dispatch<getContentsAndStat_t>(std::forward<A>(a)...);
       return true;
     case 5:
-      t.template dispatch<list_t>(std::forward<A>(a)...);
+      t.template dispatch<setContents_t>(std::forward<A>(a)...);
+      return true;
+    case 6:
+      t.template dispatch<acquire_t>(std::forward<A>(a)...);
+      return true;
+    case 7:
+      t.template dispatch<tryAcquire_t>(std::forward<A>(a)...);
+      return true;
+    case 8:
+      t.template dispatch<release_t>(std::forward<A>(a)...);
       return true;
     }
     return false;
@@ -622,33 +836,51 @@ struct api_v1 {
     using _XDRBASE::_XDRBASE;
 
     template<typename..._XDRARGS> auto
-    create(_XDRARGS &&..._xdr_args) ->
-    decltype(this->_XDRBASE::template invoke<create_t>(_xdr_args...)) {
-      return this->_XDRBASE::template invoke<create_t>(_xdr_args...);
+    fileOpen(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<fileOpen_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<fileOpen_t>(_xdr_args...);
     }
 
     template<typename..._XDRARGS> auto
-    remove(_XDRARGS &&..._xdr_args) ->
-    decltype(this->_XDRBASE::template invoke<remove_t>(_xdr_args...)) {
-      return this->_XDRBASE::template invoke<remove_t>(_xdr_args...);
+    fileClose(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<fileClose_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<fileClose_t>(_xdr_args...);
     }
 
     template<typename..._XDRARGS> auto
-    get(_XDRARGS &&..._xdr_args) ->
-    decltype(this->_XDRBASE::template invoke<get_t>(_xdr_args...)) {
-      return this->_XDRBASE::template invoke<get_t>(_xdr_args...);
+    fileDelete(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<fileDelete_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<fileDelete_t>(_xdr_args...);
     }
 
     template<typename..._XDRARGS> auto
-    set(_XDRARGS &&..._xdr_args) ->
-    decltype(this->_XDRBASE::template invoke<set_t>(_xdr_args...)) {
-      return this->_XDRBASE::template invoke<set_t>(_xdr_args...);
+    getContentsAndStat(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<getContentsAndStat_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<getContentsAndStat_t>(_xdr_args...);
     }
 
     template<typename..._XDRARGS> auto
-    list(_XDRARGS &&..._xdr_args) ->
-    decltype(this->_XDRBASE::template invoke<list_t>(_xdr_args...)) {
-      return this->_XDRBASE::template invoke<list_t>(_xdr_args...);
+    setContents(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<setContents_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<setContents_t>(_xdr_args...);
+    }
+
+    template<typename..._XDRARGS> auto
+    acquire(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<acquire_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<acquire_t>(_xdr_args...);
+    }
+
+    template<typename..._XDRARGS> auto
+    tryAcquire(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<tryAcquire_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<tryAcquire_t>(_xdr_args...);
+    }
+
+    template<typename..._XDRARGS> auto
+    release(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<release_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<release_t>(_xdr_args...);
     }
   };
 };

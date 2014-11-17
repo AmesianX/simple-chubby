@@ -1,9 +1,43 @@
 
 typedef string longstring<>;
-typedef unsigned ErrorCode;
-typedef longstring SetString<>;
+typedef unsigned int ErrorCode;
+typedef unsigned hyper Mode;
 
-union RPCBool switch (unsigned discriminant) {
+struct MetaData {
+    unsigned hyper instance_number;
+    unsigned hyper content_generation_number;
+    unsigned hyper lock_generation_number;
+    unsigned hyper file_content_checksum;
+    bool is_directory;
+};
+
+typedef longstring FileContent;
+typedef longstring DirectoryContent<>;
+
+struct FileHandler {
+    unsigned hyper magic_number;
+    unsigned hyper master_sequence_number;
+    longstring file_name;
+    unsigned hyper instance_number;
+    bool write_is_allowed;
+};
+
+struct ArgOpen {
+    longstring name;
+    Mode mode;
+};
+
+struct ArgSetContents {
+    FileHandler fd;
+    FileContent content;
+};
+
+struct ContentsAndStat {
+    FileContent content;
+    MetaData stat;
+};
+
+union RetBool switch (unsigned discriminant) {
 case 0:
     bool val;
 case 1:
@@ -12,36 +46,35 @@ default:
     void;
 };
 
-union RPCString switch (unsigned discriminant) {
+
+union RetFd switch (unsigned discriminant) {
 case 0:
-    string val<>;
+    FileHandler val;
 case 1:
     ErrorCode errCode;
 default:
     void;
 };
 
-
-union RPCSet switch (unsigned discriminant) {
+union RetContentsAndStat switch (unsigned discriminant) {
 case 0:
-    SetString val;
+    ContentsAndStat val;
 case 1:
     ErrorCode errCode;
 default:
     void;
 };
 
-struct kvpair {
-	string key<512>;
-	string val<>;
-};
 
 program server_api {
   version api_v1 {
-	RPCBool create(kvpair) = 1;
-	RPCBool remove(longstring) = 2;
-	RPCString get(longstring) = 3;
-	RPCBool set(kvpair) = 4;
-	RPCSet list(longstring) = 5;
+	RetFd fileOpen(ArgOpen) = 1;
+	RetBool fileClose(FileHandler) = 2;
+	RetBool fileDelete(FileHandler) = 3;
+	RetContentsAndStat getContentsAndStat(FileHandler) = 4;
+	RetBool setContents(ArgSetContents) = 5;
+	RetBool acquire(FileHandler) = 6;
+	RetBool tryAcquire(FileHandler) = 7;
+	RetBool release(FileHandler) = 8;
   } = 1;
 } = 0x40048086;

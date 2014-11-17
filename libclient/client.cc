@@ -54,6 +54,93 @@ Client::isConnected()
     return client != NULL;
 }
 
+FileHandler 
+Client::fileOpen(const std::string &file_name, Mode mode)
+{
+    ArgOpen args;
+    
+    auto r = client->fileOpen(args);
+
+    return r->val();
+}
+
+void 
+Client::fileClose(const FileHandler &fd)
+{
+    FileHandler args;
+    
+    auto r = client->fileClose(args);
+
+    return;
+}
+
+bool 
+Client::fileDelete(const FileHandler &fd)
+{
+    FileHandler args;
+    
+    auto r = client->fileClose(args);
+
+    return r->val();
+}
+
+bool 
+Client::getContentsAndStat(const FileHandler &fd, 
+			   FileContent *file_content, MetaData *meta_data)
+{
+    FileHandler args;
+    
+    auto r = client->getContentsAndStat(args);
+    *file_content = r->val().content;
+    *meta_data = r->val().stat;
+
+    return true;
+}
+
+bool 
+Client::setContents(const FileHandler &fd, const FileContent &file_content)
+{
+    ArgSetContents args;
+    args.fd = fd;
+    args.content = file_content;
+    
+    auto r = client->setContents(args);
+
+    return r->val();
+}
+
+
+void 
+Client::acquire(const FileHandler &fd)
+{
+    FileHandler args;
+    
+    auto r = client->acquire(args);
+
+    return;
+}
+
+bool 
+Client::tryAcquire(const FileHandler &fd)
+{
+    FileHandler args;
+    
+    auto r = client->tryAcquire(args);
+
+    return r->val();
+}
+
+void 
+Client::release(const FileHandler &fd)
+{
+    FileHandler args;
+    
+    auto r = client->release(args);
+
+    return;
+}
+
+/*
 bool
 Client::create(const std::string &path, const std::string &val)
 {
@@ -127,3 +214,4 @@ Client::list(const string &path)
     return s;
 }
 
+*/

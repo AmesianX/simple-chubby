@@ -71,38 +71,17 @@ public:
      * Return Value: true if connected
      */
     bool isConnected();
-    /*
-     * Creates a key with specified path and value
-     *
-     * Return Value: true if key was created, false if key already exists
-     */
-    bool create(const std::string &path, const std::string &val);
-    /*
-     * Removes a key
-     *
-     * Return Value: true if key was removed, false if the key does not exist
-     */
-    bool remove(const std::string &path);
-    /*
-     * Get the value of the specified key
-     *
-     * Return Value: Value of the key
-     * Throws an exception if the key is not found
-     */
-    std::string get(const std::string &path);
-    /*
-     * Set the value of the specified key
-     *
-     * Throws an exception if the key is not found
-     */
-    void set(const std::string &path, const std::string &val);
-    /*
-     * List all sub-keys
-     *
-     * Return Value: A set of all keys
-     * Throws an exception if the key is not found
-     */
-    std::set<std::string> list(const std::string &path);
+    
+    /* Chubby APIs */
+    FileHandler fileOpen(const std::string &file_name, Mode mode);
+    void fileClose(const FileHandler &fd);
+    bool fileDelete(const FileHandler &fd);
+    bool getContentsAndStat(const FileHandler &fd, FileContent *file_content, MetaData *meta_data);
+    bool setContents(const FileHandler &fd, const FileContent &file_content);
+    void acquire(const FileHandler &fd);
+    bool tryAcquire(const FileHandler &fd);
+    void release(const FileHandler &fd);
+
 private:
     xdr::srpc_client<api_v1> *client;
 };
