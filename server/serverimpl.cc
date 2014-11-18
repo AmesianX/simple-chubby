@@ -26,6 +26,14 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg)
       // TODO return with error
   }
 
+  // check if client has already opened this file
+  auto l = client2fd_map[client_id];
+  for (auto it = l.begin(); it != l.end(); ++it)
+      if ((*it)->file_name.compare(file_name) == 0) {
+	  // FD with the same file_name exists
+	  // TODO return error
+      }
+
   FileHandler *fd = new FileHandler();
   // Create file or dir
   if((mode & CREATE_DIRECTORY) || (mode & CREATE_DIRECTORY)) {

@@ -82,6 +82,7 @@ const uint64_t CREATE_FILE = 0x8;
 // If neither CREATE_DIRECTORY or CREATE_FILE flag is set, it opens a node,
 // and return FAIL if the node does not exists.
 // If both CREATE_DIRECTORY and CREATE_FILE flags are set, throw exception.
+// If client has already opened node FILE_NAME, throw exception
 FileHandlerId open(const std::string& file_name, mode_t mode);
 
 // Closes the file handler identifier, and further calls using the file
