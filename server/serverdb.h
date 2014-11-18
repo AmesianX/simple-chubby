@@ -7,6 +7,7 @@
 #include <set>
 #include <string>
 #include <cstdint>
+#include "include/server.hh"
 
 class ServerDB {
 public:
@@ -20,38 +21,6 @@ public:
      * Destructor for ServerDB
      */
     ~ServerDB();
-    /*
-     * Checks if a key exists.
-     *
-     * Return Value: true if the key exists, false otherwise
-     */
-    bool hasKey(const std::string &path);
-    bool hasName(const std::string &name);
-    /*
-     * Get a value
-     *
-     * Return Value: value of the key or throws an exception
-     */
-    std::string get(const std::string &path);
-    /*
-     * Set or Update a key-value pair
-     *
-     * Return Value: true if the key already exists, false otherwise
-     */
-    bool set(const std::string &path, const std::string &val);
-    /*
-     * Removes a single key
-     *
-     * Throws an exception if it does not exist
-     */
-    void remove(const std::string &path);
-    /*
-     * List all sub-keys
-     *
-     * Return Value: A set of all sub-keys, returns empty set if it does not 
-     * exist or has no children.
-     */
-    std::set<std::string> list(const std::string &path);
 
     /* 
      * Creates node named FILE_NAME after done checking.
@@ -63,7 +32,6 @@ public:
      * Return Value: true if the creation succeeds, false otherwire.
      */
     bool checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number);
-
 
     /* 
      * Opens node named FILE_NAME after done checking.
@@ -78,11 +46,32 @@ public:
     /* 
      * Delete node named FILE_NAME after done checking.
      * Delete fails if file/dir does not exists, dir has children, lock is held
-     * or INSTANCE_NUMBER is not larger than or equal to node's.
+     * or INSTANCE_NUMBER does not match.
      *
      * Return Value: true if the delete succeeds, false otherwire.
      */
     bool checkAndDelete(const std::string &file_name, uint64_t instance_number);
+
+    /*
+     * Read content and meta of node FILE_NAME, and stores the results
+     * in CONTENT and META.
+     * Operation fails if the node does not exists or INSTANCE_NUMBER does 
+     * not match.
+     *
+     * Return Value: true if the read succeeds, false otherwire.
+     */
+    bool checkAndRead(const std::string &file_name, uint64_t instance_number,
+		      std::string *content, MetaData *meta);
+
+    /*
+     * Update node FILE_NAME with content 
+     * Operation fails if the node does not exists or INSTANCE_NUMBER does 
+     * not match.
+     *
+     * Return Value: true if the update succeeds, false otherwire.
+     */
+    bool checkAndUpdate(const std::string &file_name, uint64_t instance_number,
+			const std::string &content);
 
 private:
     // Helper functions
@@ -91,6 +80,7 @@ private:
     void close();
     void sqlexec(const char *fmt, ...);
     std::string getParentName(const std::string &name);
+    bool hasName(const std::string &name);
 
     sqlite3 *db;
 };

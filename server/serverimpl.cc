@@ -3,6 +3,7 @@
 
 #include "server/serverimpl.hh"
 #include <cstdint>
+#include <cassert>
 
 const uint64_t READ = 0x1;
 const uint64_t WRITE = 0x2;
@@ -130,7 +131,8 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg)
       delete f;
   }  
   // remove the list in file2fd_map
-  file2fd_map.erase(fd->file_name);
+  size_t r = file2fd_map.erase(fd->file_name);
+  assert(r == 1);
   
   // return normally with TRUE value
   res->discriminant(0);
@@ -142,9 +144,28 @@ std::unique_ptr<RetContentsAndStat>
 api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg)
 {
   std::unique_ptr<RetContentsAndStat> res(new RetContentsAndStat);
+  uint64_t client_id = 123; // TODO
   
-  // Fill in function body here
-  
+  FileHandler *fd = findFd(client_id, *arg);
+  if(fd == nullptr) {
+      // No match FD found
+      // TODO throw an exception
+      return res;
+  }
+
+  std::string content;
+  MetaData meta;
+  // try to read in the database
+  if(!db.checkAndRead(fd->file_name, fd->instance_number, &content, &meta)) {
+      // Read failed
+      // TODO throw an exception
+      return res;
+  }
+
+  // return normally with ContentsAndStat
+  res->discriminant(0);
+  res->val().content = content;
+  res->val().stat = meta;
   return res;
 }
 
@@ -152,9 +173,25 @@ std::unique_ptr<RetBool>
 api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg)
 {
   std::unique_ptr<RetBool> res(new RetBool);
+  uint64_t client_id = 123; // TODO
   
-  // Fill in function body here
+  FileHandler *fd = findFd(client_id, arg->fd);
+  if(fd == nullptr) {
+      // No match FD found
+      // TODO throw an exception
+      return res;
+  }
+
+  // try to update in the database
+  if(!db.checkAndUpdate(fd->file_name, fd->instance_number, arg->content)) {
+      // Update failed
+      // TODO throw an exception
+      return res;
+  }
   
+  // return normally with TRUE value
+  res->discriminant(0);
+  res->val() = true;
   return res;
 }
 
@@ -237,7 +274,7 @@ api_v1_server::findFd(uint64_t client_id, const FileHandler &fd)
     return nullptr;
 }
 
-#if 1
+#if 0
 
 int
 main(int argc, const char *argv[])

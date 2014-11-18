@@ -16,18 +16,6 @@
 
 using namespace std;
 
-int
-dirDepth(const string &path)
-{
-    int depth = 0;
-
-    for (auto it = path.begin(); it != path.end(); it++) {
-        if ((*it) == '/')
-            depth++;
-    }
-
-    return depth;
-}
 
 ServerDB::ServerDB(const char *file)
 {
@@ -39,14 +27,6 @@ ServerDB::~ServerDB()
     close();
 }
 
-bool
-ServerDB::hasKey(const string &path)
-{
-    SQLStmt s(db, "SELECT key, value FROM kvpair WHERE key = \"%s\"",
-            path.c_str());
-
-    return s.step().row();
-}
 
 
 bool
@@ -56,66 +36,6 @@ ServerDB::hasName(const string &path)
             path.c_str());
 
     return s.step().row();
-}
-
-string
-ServerDB::get(const string &path)
-{
-    SQLStmt s(db, "SELECT value FROM kvpair WHERE key = \"%s\"",
-            path.c_str());
-
-    s.step();
-    if (!s.row()) {
-        cout << "No Key: " << path << endl;
-        throw runtime_error("Key not present");
-    }
-
-    return s.str(0);
-}
-
-bool
-ServerDB::set(const string &path, const string &val)
-{
-    bool update = hasKey(path);
-    sqlexec("BEGIN;");
-    if (update) {
-        sqlexec("UPDATE kvpair SET value = \"%s\" WHERE key = \"%s\";",
-            val.c_str(), path.c_str());
-    } else {
-        int depth = dirDepth(path);
-        sqlexec("INSERT INTO kvpair (key, value, depth) VALUES (\"%s\", \"%s\", %d);",
-            path.c_str(), val.c_str(), depth);
-    }
-    sqlexec("COMMIT;");
-    return update;
-}
-
-void
-ServerDB::remove(const string &path)
-{
-    if (!hasKey(path))
-        throw runtime_error("Key not found");
-
-    sqlexec("BEGIN;");
-    sqlexec("DELETE FROM kvpair WHERE key = \"%s\";", path.c_str());
-    sqlexec("COMMIT;");
-}
-
-set<string>
-ServerDB::list(const string &path)
-{
-    int depth = dirDepth(path) + 1;
-    std::set<string> r;
-    SQLStmt s(db, "SELECT key FROM kvpair WHERE key LIKE '%s/%%' AND depth = %d",
-            path.c_str(), depth);
-
-    s.step();
-    while (s.row()) {
-        r.insert(s.str(0));
-        s.step();
-    }
-
-    return r;
 }
 
 bool
@@ -165,10 +85,6 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 bool 
 ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
 {
-    bool file_exists = hasName(file_name);
-    if (!file_exists)
-	return false;
-
     SQLStmt s(db, "SELECT lock_owner, instance_number, is_directory FROM fs WHERE name = \"%s\"",
             file_name.c_str());
 
@@ -185,7 +101,7 @@ ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
 
     // check INSTANCE_NUMBER
     uint64_t node_instance_number = s.integer(1);
-    if (node_instance_number > instance_number)
+    if (node_instance_number != instance_number)
 	return false;
 
     // check dir is empty
@@ -206,7 +122,65 @@ ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
     
     return true;
 }
+bool
+ServerDB::checkAndRead(const std::string &file_name, uint64_t instance_number,
+		       std::string *content, MetaData *meta)
+{
+    SQLStmt s(db, "SELECT content, instance_number, content_generation_number, lock_generation_number, file_content_checksum, is_directory FROM fs WHERE name = \"%s\"",
+	      file_name.c_str());
 
+    s.step();
+    if (!s.row()) {
+	// node does not exist
+	return false;
+    }
+
+    // check INSTANCE_NUMBER
+    uint64_t node_instance_number = s.integer(1);
+    if (node_instance_number != instance_number)
+	return false;
+
+    *content = s.str(0);
+    meta->instance_number = node_instance_number;
+    meta->content_generation_number = s.integer(2);
+    meta->lock_generation_number = s.integer(3);
+    meta->file_content_checksum = s.integer(4);
+    meta->is_directory = s.integer(5);
+
+    return true;
+}
+
+bool
+ServerDB::checkAndUpdate(const std::string &file_name, uint64_t instance_number,
+			 const std::string &content)
+{
+    SQLStmt s(db, "SELECT instance_number, content_generation_number FROM fs WHERE name = \"%s\"",
+	      file_name.c_str());
+
+    s.step();
+    if (!s.row()) {
+	// node does not exist
+	return false;
+    }
+
+    // check INSTANCE_NUMBER
+    uint64_t node_instance_number = s.integer(0);
+    if (node_instance_number != instance_number)
+	return false;
+    
+    uint64_t new_content_generation_number = s.integer(1) + 1;
+    
+    std::hash<std::string> str_hash;
+    uint64_t new_checksum = str_hash(content);
+
+    // do update
+    sqlexec("BEGIN;");
+    sqlexec("UPDATE fs SET content = \"%s\", content_generation_number = %d, file_content_checksum = %d  WHERE name = \"%s\";",
+            content.c_str(), new_content_generation_number, new_checksum, file_name.c_str());
+    sqlexec("COMMIT;");
+
+    return true;
+}
 
 void
 ServerDB::create(const char *file)
@@ -228,7 +202,7 @@ ServerDB::create(const char *file)
 	"instance_number INT, " +
 	"content_generation_number INT DEFAULT 0, " +
 	"lock_generation_number INT DEFAULT 0, " +
-	"file_content_checksum INT, " +
+	"file_content_checksum INT DEFAULT 0, " +
 	"is_directory INT " +
 	");";
     sqlexec("BEGIN;");
@@ -367,6 +341,35 @@ main(int argc, const char *argv[])
     cout << "open /test ";
     if(r)
 	cout << "succeeded: instance_number = "<< n << endl;
+    else cout << "failed." << endl;
+
+    std::string content;
+    MetaData meta;
+    r = s.checkAndRead("/test", 3, &content, &meta);
+    cout << "read /test ";
+    if(r) {
+	cout << "succeeded." << endl;
+	cout << content<< " "<< meta.instance_number << " "<< meta.content_generation_number<<
+	    " "<< meta.lock_generation_number << " "<< meta.file_content_checksum << 
+	    " "<< meta.is_directory<<endl;
+    }
+    else cout << "failed." << endl;
+
+
+    r = s.checkAndUpdate("/test", 3, "Hello.");
+    cout << "write /test ";
+    if(r)
+	cout << "succeeded."<< endl;
+    else cout << "failed." << endl;
+    
+    r = s.checkAndRead("/test", 3, &content, &meta);
+    cout << "read /test ";
+    if(r) {
+	cout << "succeeded." << endl;
+	cout << content<< " "<< meta.instance_number << " "<< meta.content_generation_number<<
+	    " "<< meta.lock_generation_number << " "<< meta.file_content_checksum << 
+	    " "<< meta.is_directory<<endl;
+    }
     else cout << "failed." << endl;
     
 }
