@@ -1,0 +1,26 @@
+shell/shell.cc
+  Executable. Invokes corresponding client methods.
+  (1) Initializes the client object.
+    Client client = Client();
+    client.open(HOST);
+  (2) Invokes corresponding function calls through the client object.
+
+libclient/client.cc
+  Client library.
+  (1) Initializes the rpc handler:
+    auto fd = tcp_connect(host.c_str(), UNIQUE_RPC_PORT);
+    xdr::srpc_client<api_v1> client = new srpc_client<api_v1>{fd.release()};
+  (2) Forwards the request.
+    RpcOutput = client->rpcName(RpcInput)
+
+server/
+server/server.cc
+  Executable.
+    rpctype::api_v1_server s;
+    rpc_tcp_listener rl(tcp_listen(UNIQUE_RPC_PORT, AF_INET));
+    rl.register_service(s);
+    rl.run();
+server/serverimpl.cc
+  Implements class api_v1_server, maintains a pointer to ServerDB.
+  Provides server logic.
+
