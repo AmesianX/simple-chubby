@@ -22,7 +22,7 @@ int main(int argc, const char *argv[])
     xdr::chubby_server chubby_server(tcp_listen(UNIQUE_RPC_PORT, AF_INET));
 
     try {
-        // chubby_server.register_service(s);
+        chubby_server.register_service(s);
         chubby_server.run();
     } catch (exception &e) {
         cerr << e.what() << endl;

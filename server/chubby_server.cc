@@ -115,7 +115,7 @@ void chubby_server::asynchronized_dispatch(msg_ptr mp, msg_sock *ms) {
 
   try {
     // Run it async.
-    // vers->second->asynchronize_process(hdr, g, ms);
+    vers->second->asynchronized_process(hdr, g, ms);
     return;
   } catch (const xdr_runtime_error &e) {
     std::cerr << xdr_to_string(hdr, e.what());

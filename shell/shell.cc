@@ -34,7 +34,7 @@ void Cmd_Decrement(int argc, const char *argv[]) {
     cout << "Usage: decrement INT" << endl;
     return;
   }
-  auto result = client.increment(std::stoi(argv[1]));
+  auto result = client.decrement(std::stoi(argv[1]));
   cout << result << endl;
 }
 

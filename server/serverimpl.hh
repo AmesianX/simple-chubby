@@ -11,8 +11,10 @@ class test_version_server {
 public:
   using rpc_interface_type = test_version;
 
-  std::unique_ptr<int> increment(std::unique_ptr<int> arg);
-  std::unique_ptr<int> decrement(std::unique_ptr<int> arg);
+  std::unique_ptr<int> increment(std::unique_ptr<int> arg, xdr::rpc_msg rhdr,
+                                 xdr::msg_sock *ms);
+  std::unique_ptr<int> decrement(std::unique_ptr<int> arg, xdr::rpc_msg rhdr,
+                                 xdr::msg_sock *ms);
 };
 
 #endif // !__XDR_SERVER_SERVERIMPL_HH_INCLUDED__
