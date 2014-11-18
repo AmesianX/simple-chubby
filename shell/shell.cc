@@ -4,7 +4,6 @@
 
 #include <unistd.h>
 
-#include <set>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -21,119 +20,22 @@ Client client;
 #define DEBUG_MAX_ARGS      5
 #define DEBUG_MAX_LINE      256
 
-void
-Cmd_Help(int argc, const char *argv[])
-{
-    cout << "create     Create a node" << endl;
-    cout << "echo       Echo arguments" << endl;
-    cout << "exit       Exit shell" << endl;
-    cout << "get        Get a node" << endl;
-    cout << "help       Display the list of commands" << endl;
-    cout << "remove     Remove a node" << endl;
-    cout << "set        Set a node" << endl;
+void Cmd_Increment(int argc, const char *argv[]) {
+  if (argc != 2) {
+    cout << "Usage: increment INT" << endl;
+    return;
+  }
+  auto result = client.increment(std::stoi(argv[1]));
+  cout << result << endl;
 }
 
-void
-Cmd_Echo(int argc, const char *argv[])
-{
-    int i;
-
-    for (i = 1; i < argc; i++)
-    {
-        cout << argv[i] << " ";
-    }
-    cout << endl;
-}
-
-void
-Cmd_Create(int argc, const char *argv[])
-{
-    if (argc != 3) {
-        cout << "Usage: create PATH VALUE" << endl;
-        return;
-    }
-
-    try {
-        if (client.create(argv[1], argv[2]))
-            cout << "CREATED" << endl;
-        else
-            cout << "KEY ALREADY EXISTS" << endl;
-    } catch (ClientException &e) {
-        cout << e.what() << endl;
-    }
-}
-
-void
-Cmd_Remove(int argc, const char *argv[])
-{
-    if (argc != 2) {
-        cout << "Usage: remove PATH" << endl;
-        return;
-    }
-
-    try {
-        if (client.remove(argv[1]))
-            cout << "REMOVED" << endl;
-        else
-            cout << "KEY NOT FOUND" << endl;
-    } catch (ClientException &e) {
-        cout << e.what() << endl;
-    }
-}
-
-void
-Cmd_Set(int argc, const char *argv[])
-{
-    if (argc != 3) {
-        cout << "Usage: set PATH VALUE" << endl;
-        return;
-    }
-
-    try {
-        client.set(argv[1], argv[2]);
-    } catch (ClientException &e) {
-        cout << e.what() << endl;
-    }
-}
-
-void
-Cmd_Get(int argc, const char *argv[])
-{
-    string result;
-
-    if (argc != 2) {
-        cout << "Usage: get PATH" << endl;
-        return;
-    }
-
-    try {
-        result = client.get(argv[1]);
-        cout << result << endl;
-    } catch (ClientException &e) {
-        cout << e.what() << endl;
-    }
-}
-
-void
-Cmd_List(int argc, const char *argv[])
-{
-    set<string> result;
-
-    if (argc != 2) {
-        cout << "Usage: list PATH" << endl;
-        return;
-    }
-
-    try {
-        result = client.list(argv[1]);
-    } catch (ClientException &e) {
-        cout << e.what() << endl;
-        return;
-    }
-
-    for (auto it = result.begin(); it != result.end(); it++) {
-        cout << (*it) << endl;
-    }
+void Cmd_Decrement(int argc, const char *argv[]) {
+  if (argc != 2) {
+    cout << "Usage: decrement INT" << endl;
+    return;
+  }
+  auto result = client.increment(std::stoi(argv[1]));
+  cout << result << endl;
 }
 
 void
@@ -158,22 +60,10 @@ DispatchCommand(char *buf)
 
     // execute command
     string cmd = argv[0];
-    if (cmd == "help") {
-        Cmd_Help(argc, (const char **)argv);
-    } else if (cmd == "echo") {
-        Cmd_Echo(argc, (const char **)argv);
-    } else if (cmd == "exit") {
-        exit(0);
-    } else if (cmd == "create") {
-        Cmd_Create(argc, (const char **)argv);
-    } else if (cmd == "remove") {
-        Cmd_Remove(argc, (const char **)argv);
-    } else if (cmd == "get") {
-        Cmd_Get(argc, (const char **)argv);
-    } else if (cmd == "set") {
-        Cmd_Set(argc, (const char **)argv);
-    } else if (cmd == "list") {
-        Cmd_List(argc, (const char **)argv);
+    if (cmd == "increment") {
+        Cmd_Increment(argc, (const char **)argv);
+    } else if (cmd == "decrement") {
+        Cmd_Decrement(argc, (const char **)argv);
     } else if (cmd == "#") {
         // Ignore comments
     } else if (cmd != "") {

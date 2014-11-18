@@ -1,9 +1,5 @@
 
-SERVER_SRC := server/server.cc \
-			  server/serverimpl.cc \
-			  server/serverdb.cc \
-			  server/sqlstmt.cc \
-			  server/sqlite3.c
+SERVER_SRC := server/server.cc server/serverimpl.cc
 
 SERVER_OBJ := $(SERVER_SRC:.c=.o)
 SERVER_OBJ := $(SERVER_OBJ:.cc=.o)

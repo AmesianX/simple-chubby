@@ -6,7 +6,6 @@
 #include <thread>
 
 #include <xdrpp/srpc.h>
-#include <xdrpp/rpcbind.hh>
 #include <xdrpp/socket.h>
 
 #include "include/rpcconfig.h"
@@ -18,7 +17,7 @@ using namespace xdr;
 
 int main(int argc, const char *argv[])
 {
-    api_v1_server s;
+    test_version_server s;
     rpc_tcp_listener rl(tcp_listen(UNIQUE_RPC_PORT, AF_INET));
 
     try {
