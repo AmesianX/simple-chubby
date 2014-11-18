@@ -1,0 +1,94 @@
+
+#include <iostream>
+#include <server/chubby_server.h>
+
+namespace xdr {
+
+// Setup the polling on the socket "fd". Callback is accept_cb.
+chubby_server::chubby_server(unique_fd &&fd)
+    : listen_fd_(fd ? std::move(fd) : tcp_listen()) {
+  set_close_on_exec(listen_fd_.get());
+  ps_.fd_cb(listen_fd_.get(), pollset::Read,
+	    std::bind(&chubby_server::accept_cb, this));
+}
+
+chubby_server::~chubby_server() {
+  ps_.fd_cb(listen_fd_.get(), pollset::Read);
+}
+
+void chubby_server::accept_cb() {
+  int fd = accept(listen_fd_.get(), nullptr, 0);
+  if (fd == -1) {
+    std::cerr << "chubby_server: accept: " << std::strerror(errno)
+	      << std::endl;
+    return;
+  }
+  set_close_on_exec(fd);
+  msg_sock *ms = new msg_sock(ps_, fd);
+  ms->setrcb(std::bind(&chubby_server::receive_cb, this, ms,
+		       std::placeholders::_1));
+}
+
+void chubby_server::receive_cb(msg_sock *ms, msg_ptr mp) {
+  if (!mp) {
+    delete ms;
+    return;
+  }
+  try {
+    asynchronized_dispatch(std::move(mp), ms);
+    // ms->putmsg
+  } catch (const xdr_runtime_error &e) {
+    std::cerr << e.what() << std::endl;
+    delete ms;
+  }
+}
+
+void chubby_server::asynchronized_dispatch(msg_ptr mp, msg_sock *ms) {
+  // ms->putmsg
+  // Unmarshell the message.
+  xdr_get g(mp);
+  rpc_msg hdr;
+  archive(g, hdr);
+  // check type.
+  if (hdr.body.mtype() != CALL)
+    throw xdr_runtime_error("rpc_server received non-CALL message");
+  // Check rpc version.
+  if (hdr.body.cbody().rpcvers != 2) {
+    return;
+    // return xdr_to_msg(rpc_mkerr(hdr, RPC_MISMATCH));
+  }
+  // Identify program.
+  auto prog = servers_.find(hdr.body.cbody().prog);
+  if (prog == servers_.end()) {
+    return;
+    // return xdr_to_msg(rpc_mkerr(hdr, PROG_UNAVAIL));
+  }
+  // Identify version.
+  auto vers = prog->second.find(hdr.body.cbody().vers);
+  if (vers == prog->second.end()) {
+    rpc_mkerr(hdr, PROG_MISMATCH);
+    hdr.body.rbody().areply().reply_data.mismatch_info().low =
+      prog->second.cbegin()->first;
+    hdr.body.rbody().areply().reply_data.mismatch_info().high =
+      prog->second.crbegin()->first;
+    return;
+    // return xdr_to_msg(hdr);
+  }
+
+  try {
+    // Run it async.
+    vers->second->asynchronize_process(hdr, g, ms);
+    return;
+  } catch (const xdr_runtime_error &e) {
+    std::cerr << xdr_to_string(hdr, e.what());
+    return;
+    // return xdr_to_msg(rpc_mkerr(hdr, GARBAGE_ARGS));
+  }
+}
+
+void chubby_server::run() {
+  while (ps_.pending())
+    ps_.poll();
+}
+
+}  // namespace xdr

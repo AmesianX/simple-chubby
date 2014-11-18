@@ -1,5 +1,5 @@
 
-SERVER_SRC := server/server.cc server/serverimpl.cc
+SERVER_SRC := server/server.cc server/serverimpl.cc server/chubby_server.cc
 
 SERVER_OBJ := $(SERVER_SRC:.c=.o)
 SERVER_OBJ := $(SERVER_OBJ:.cc=.o)
