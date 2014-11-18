@@ -20,7 +20,7 @@ public:
   chubby_server(unique_fd &&fd);
   chubby_server() : chubby_server(unique_fd(-1)) {}
   virtual ~chubby_server();
-  void register_service_base(service_base *s) {
+  void register_service(service_base *s) {
     servers_[s->prog_][s->vers_].reset(s);
   }
 

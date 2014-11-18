@@ -4,6 +4,44 @@
 
 namespace xdr {
 
+namespace {
+
+rpc_msg &
+rpc_mkerr(rpc_msg &m, accept_stat stat)
+{
+  m.body.mtype(REPLY).rbody().stat(MSG_ACCEPTED).areply()
+    .reply_data.stat(stat);
+  return m;
+}
+
+rpc_msg &
+rpc_mkerr(rpc_msg &m, reject_stat stat)
+{
+  m.body.mtype(REPLY).rbody().stat(MSG_DENIED).rreply().stat(stat);
+  switch(stat) {
+  case RPC_MISMATCH:
+    m.body.rbody().rreply().mismatch_info().low = 2;
+    m.body.rbody().rreply().mismatch_info().high = 2;
+    break;
+  case AUTH_ERROR:
+    m.body.rbody().rreply().rj_why() = AUTH_FAILED;
+    break;
+  }
+  return m;
+}
+
+#if 0
+rpc_msg &
+rpc_mkerr(rpc_msg &m, auth_stat stat)
+{
+  m.body.mtype(REPLY).rbody().stat(MSG_DENIED).rreply()
+    .stat(AUTH_ERROR).rj_why() = stat;
+  return m;
+}
+#endif
+
+}  // namespace
+
 // Setup the polling on the socket "fd". Callback is accept_cb.
 chubby_server::chubby_server(unique_fd &&fd)
     : listen_fd_(fd ? std::move(fd) : tcp_listen()) {
@@ -77,7 +115,7 @@ void chubby_server::asynchronized_dispatch(msg_ptr mp, msg_sock *ms) {
 
   try {
     // Run it async.
-    vers->second->asynchronize_process(hdr, g, ms);
+    // vers->second->asynchronize_process(hdr, g, ms);
     return;
   } catch (const xdr_runtime_error &e) {
     std::cerr << xdr_to_string(hdr, e.what());
