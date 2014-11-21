@@ -1,13 +1,9 @@
 
-SERVER_SRC := server/server.cc \
-			  server/serverimpl.cc \
-			  server/serverdb.cc \
-			  server/sqlstmt.cc \
-			  server/sqlite3.c
+SERVER_SRC := server/server.cc server/serverimpl.cc server/chubby_server.cc server/chubby_client.cc
 
 SERVER_OBJ := $(SERVER_SRC:.c=.o)
 SERVER_OBJ := $(SERVER_OBJ:.cc=.o)
-$(SERVER_OBJ): include/server.hh
+$(SERVER_OBJ): include/server.hh include/event.hh
 
 server/%.o: server/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<

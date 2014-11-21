@@ -5,6 +5,8 @@
 #ifndef _XDRPP_SERVER_H_HEADER_INCLUDED_
 #define _XDRPP_SERVER_H_HEADER_INCLUDED_ 1
 
+#include <iostream>
+
 #include <xdrpp/marshal.h>
 #include <xdrpp/printer.h>
 #include <xdrpp/msgsock.h>

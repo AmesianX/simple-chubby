@@ -6,10 +6,10 @@
 #include <thread>
 
 #include <xdrpp/srpc.h>
-#include <xdrpp/rpcbind.hh>
 #include <xdrpp/socket.h>
 
 #include "include/rpcconfig.h"
+#include "server/chubby_server.h"
 
 #include "serverimpl.hh"
 
@@ -18,12 +18,12 @@ using namespace xdr;
 
 int main(int argc, const char *argv[])
 {
-    api_v1_server s;
-    rpc_tcp_listener rl(tcp_listen(UNIQUE_RPC_PORT, AF_INET));
+    xdr::chubby_server chubby_server(tcp_listen(UNIQUE_RPC_PORT, AF_INET));
+    test_version_server s(&chubby_server);
 
     try {
-        rl.register_service(s);
-        rl.run();
+        chubby_server.register_service(s);
+        chubby_server.run();
     } catch (exception &e) {
         cerr << e.what() << endl;
     }
