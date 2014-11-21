@@ -30,16 +30,6 @@ rpc_mkerr(rpc_msg &m, reject_stat stat)
   return m;
 }
 
-#if 0
-rpc_msg &
-rpc_mkerr(rpc_msg &m, auth_stat stat)
-{
-  m.body.mtype(REPLY).rbody().stat(MSG_DENIED).rreply()
-    .stat(AUTH_ERROR).rj_why() = stat;
-  return m;
-}
-#endif
-
 }  // namespace
 
 // Setup the polling on the socket "fd". Callback is accept_cb.
@@ -63,25 +53,26 @@ void chubby_server::accept_cb() {
   }
   set_close_on_exec(fd);
   msg_sock *ms = new msg_sock(ps_, fd);
-  ms->setrcb(std::bind(&chubby_server::receive_cb, this, ms,
+  SessionId session_id = registerSession(fd, ms);
+  ms->setrcb(std::bind(&chubby_server::receive_cb, this, session_id,
 		       std::placeholders::_1));
 }
 
-void chubby_server::receive_cb(msg_sock *ms, msg_ptr mp) {
+void chubby_server::receive_cb(SessionId session_id, msg_ptr mp) {
   if (!mp) {
-    delete ms;
+    deregisterSession(session_id);
     return;
   }
   try {
-    asynchronized_dispatch(std::move(mp), ms);
-    // ms->putmsg
+    asynchronized_dispatch(session_id, std::move(mp));
   } catch (const xdr_runtime_error &e) {
     std::cerr << e.what() << std::endl;
-    delete ms;
+    deregisterSession(session_id);
   }
 }
 
-void chubby_server::asynchronized_dispatch(msg_ptr mp, msg_sock *ms) {
+void chubby_server::asynchronized_dispatch(SessionId session_id, msg_ptr mp) {
+  msg_sock* ms = sessionid_to_msgsock_map_[session_id];
   // ms->putmsg
   // Unmarshell the message.
   xdr_get g(mp);
@@ -92,14 +83,14 @@ void chubby_server::asynchronized_dispatch(msg_ptr mp, msg_sock *ms) {
     throw xdr_runtime_error("rpc_server received non-CALL message");
   // Check rpc version.
   if (hdr.body.cbody().rpcvers != 2) {
+    ms->putmsg(xdr_to_msg(rpc_mkerr(hdr, RPC_MISMATCH)));
     return;
-    // return xdr_to_msg(rpc_mkerr(hdr, RPC_MISMATCH));
   }
   // Identify program.
   auto prog = servers_.find(hdr.body.cbody().prog);
   if (prog == servers_.end()) {
+    ms->putmsg(xdr_to_msg(rpc_mkerr(hdr, PROG_UNAVAIL)));
     return;
-    // return xdr_to_msg(rpc_mkerr(hdr, PROG_UNAVAIL));
   }
   // Identify version.
   auto vers = prog->second.find(hdr.body.cbody().vers);
@@ -109,18 +100,18 @@ void chubby_server::asynchronized_dispatch(msg_ptr mp, msg_sock *ms) {
       prog->second.cbegin()->first;
     hdr.body.rbody().areply().reply_data.mismatch_info().high =
       prog->second.crbegin()->first;
+    ms->putmsg(xdr_to_msg(hdr));
     return;
-    // return xdr_to_msg(hdr);
   }
 
   try {
     // Run it async.
-    vers->second->asynchronized_process(hdr, g, ms);
+    vers->second->asynchronized_process(hdr, g, session_id, ms);
     return;
   } catch (const xdr_runtime_error &e) {
     std::cerr << xdr_to_string(hdr, e.what());
+    ms->putmsg(xdr_to_msg(rpc_mkerr(hdr, GARBAGE_ARGS)));
     return;
-    // return xdr_to_msg(rpc_mkerr(hdr, GARBAGE_ARGS));
   }
 }
 

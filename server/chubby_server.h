@@ -6,6 +6,8 @@
 
 namespace xdr {
 
+typedef uint32_t SessionId;
+
 class chubby_service_base_interface {
  public:
   const uint32_t prog_;
@@ -14,7 +16,7 @@ class chubby_service_base_interface {
       : prog_(prog), vers_(vers) {}
   ~chubby_service_base_interface() {}
   virtual void asynchronized_process(
-      const rpc_msg &chdr, xdr_get &g, msg_sock *ms) = 0;
+      const rpc_msg &chdr, xdr_get &g, SessionId session_id, msg_sock* ms) = 0;
 };
 
 template<typename T> class chubby_service_base : public chubby_service_base_interface {
@@ -27,36 +29,30 @@ template<typename T> class chubby_service_base : public chubby_service_base_inte
     : chubby_service_base_interface(interface::program, interface::version), server_(server) {}
   ~chubby_service_base() {}
 
-  void asynchronized_process(const rpc_msg &chdr, xdr_get &g, msg_sock *ms)
-      override {
+  void asynchronized_process(const rpc_msg &chdr, xdr_get &g,
+                             SessionId session_id, msg_sock* ms) override {
     // Check header.
     if (chdr.body.mtype() != CALL || chdr.body.cbody().rpcvers != 2
         || chdr.body.cbody().prog != prog_ || chdr.body.cbody().vers != vers_)
       return;
 
     // Build response header.
-    rpc_msg rhdr;
-    rhdr.xid = chdr.xid;
-    rhdr.body.mtype(REPLY).rbody().stat(MSG_ACCEPTED)
-      .areply().reply_data.stat(SUCCESS);
+    uint32_t xid = chdr.xid;
 
-    msg_ptr ret;
-    interface::call_dispatch(*this, chdr.body.cbody().proc, ms, g, rhdr, ret);
-    /*
     if (!interface::call_dispatch(*this, chdr.body.cbody().proc,
-				  g, rhdr, ret)) {
-      // Cannot find corresponding procedure.
-      return;
-      // rhdr.body.rbody().areply().reply_data.stat(PROC_UNAVAIL);
-      // ret = xdr_to_msg(rhdr);
+                                  session_id, xid, g)) {
+      rpc_msg rhdr;
+      rhdr.xid = chdr.xid;
+      rhdr.body.mtype(REPLY).rbody().stat(MSG_ACCEPTED)
+          .areply().reply_data.stat(SUCCESS);
+      rhdr.body.rbody().areply().reply_data.stat(PROC_UNAVAIL);
+      ms->putmsg(xdr_to_msg(rhdr));
     }
-    return ret;
-    */
   }
 
   template<typename P> typename std::enable_if<
     !std::is_same<void, typename P::res_type>::value>::type
-  dispatch(msg_sock *ms, xdr_get &g, rpc_msg rhdr, msg_ptr &ret) {
+  dispatch(SessionId session_id, uint32_t xid, xdr_get &g) {
     std::unique_ptr<typename P::arg_wire_type>
       arg(new typename P::arg_wire_type);
     archive(g, *arg);
@@ -65,22 +61,18 @@ template<typename T> class chubby_service_base : public chubby_service_base_inte
 				 " whole message");
 
     std::unique_ptr<typename P::res_type> res =
-      P::dispatch_dropvoid(server_, std::move(arg), rhdr, ms);
-    //ms->put_msg(xdr_to_msg(rhdr, *res));
-    //ret = xdr_to_msg(rhdr, *res);
+      P::dispatch_dropvoid(server_, std::move(arg), session_id, xid);
   }
   template<typename P> typename std::enable_if<
     std::is_same<void, typename P::res_type>::value>::type
-  dispatch(msg_sock *ms, xdr_get &g, rpc_msg rhdr, msg_ptr &ret) {
+  dispatch(SessionId session_id, uint32_t xid, xdr_get &g) {
     std::unique_ptr<typename P::arg_wire_type>
       arg(new typename P::arg_wire_type);
     archive(g, *arg);
     if (g.p_ != g.e_)
       throw xdr_bad_message_size("synchronous_server did not consume"
 				 " whole message");
-    P::dispatch_dropvoid(server_, std::move(arg), rhdr, ms);
-    // Not handled.
-    // ret = xdr_to_msg(rhdr);
+    P::dispatch_dropvoid(server_, std::move(arg), session_id, xid);
   }
 
 };
@@ -92,13 +84,13 @@ class chubby_server {
   unique_fd listen_fd_;
 
   void accept_cb();
-  void receive_cb(msg_sock *ms, msg_ptr mp);
-  void asynchronized_dispatch(msg_ptr mp, msg_sock *ms);
+  void receive_cb(SessionId session_id, msg_ptr mp);
+  void asynchronized_dispatch(SessionId session_id, msg_ptr mp);
   void register_base_service(chubby_service_base_interface *s) {
     servers_[s->prog_][s->vers_].reset(s);
   }
 
-public:
+ public:
   chubby_server(unique_fd &&fd);
   chubby_server() : chubby_server(unique_fd(-1)) {}
   virtual ~chubby_server();
@@ -107,6 +99,36 @@ public:
   }
 
   void run();
+  template<typename T> bool reply(SessionId session_id,
+                                  uint32_t xid, std::unique_ptr<T> result) {
+    rpc_msg rhdr;
+    rhdr.xid = xid;
+    rhdr.body.mtype(REPLY).rbody().stat(MSG_ACCEPTED)
+      .areply().reply_data.stat(SUCCESS);
+    sessionid_to_msgsock_map_[session_id]->putmsg(xdr_to_msg(rhdr, *result));
+  }
+ private:
+  std::map<int, SessionId> fd_to_sessionid_map_;
+  std::map<SessionId, int> sessionid_to_fd_map_;
+  std::map<SessionId, msg_sock*> sessionid_to_msgsock_map_;
+  SessionId session_id_allocator_ {0};
+  SessionId registerSession(int fd, msg_sock* ms) {
+    SessionId session_id = ++session_id_allocator_;
+    fd_to_sessionid_map_[fd] =session_id;
+    sessionid_to_fd_map_[session_id] = fd;
+    sessionid_to_msgsock_map_[session_id] = ms;
+    return session_id;
+  }
+  void deregisterSession(SessionId session_id) {
+    int fd = sessionid_to_fd_map_[session_id];
+    msg_sock* ms = sessionid_to_msgsock_map_[session_id];
+    delete ms;
+    fd_to_sessionid_map_.erase(fd);
+    sessionid_to_fd_map_.erase(session_id);
+    sessionid_to_msgsock_map_.erase(session_id);
+    std::cout << "Turned donw Session #" << session_id << std::endl;
+  }
+
 };
 
 
