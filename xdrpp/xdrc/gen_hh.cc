@@ -1,9 +1,10 @@
-
+#include <cstdlib>
 #include <cassert>
 #include <ctype.h>
 #include <sstream>
 #include <utility>
 #include "xdrc_internal.h"
+#include "missingfunc.hh"
 
 using std::endl;
 

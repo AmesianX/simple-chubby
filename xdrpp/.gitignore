@@ -2,6 +2,7 @@
 *.la
 *.o
 *~
+#*
 .deps
 .dirstamp
 Makefile
@@ -29,6 +30,7 @@ xdrc/parse.cc
 xdrc/parse.hh
 xdrc/scan.cc
 xdrc/xdrc
+xdrc/xdrc.exe
 xdrpp-uninstalled.pc
 xdrpp.pc
 xdrpp/*.hh

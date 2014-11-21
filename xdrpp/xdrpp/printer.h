@@ -7,6 +7,7 @@
 
 #include <sstream>
 #include <xdrpp/types.h>
+#include "missingfunc.hh"
 
 namespace xdr {
 

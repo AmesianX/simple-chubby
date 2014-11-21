@@ -1,10 +1,9 @@
-
+#include <cstdlib>
 #include <cassert>
 #include <iostream>
 #include <fstream>
 #include <fcntl.h>
 #include <getopt.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <config.h>
 #include "xdrc_internal.h"

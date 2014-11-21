@@ -1,8 +1,12 @@
 *.a
 *.o
 *~
+#*
+*/#*
 README.html
 include/server.h
 server/server
+server/server.exe
 shell/shell
+shell/shell.exe
 Makefile.local

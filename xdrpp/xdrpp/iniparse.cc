@@ -1,8 +1,11 @@
-
+#include <cstdlib>
 #include <cstring>
+#include <cerrno>
+#include <string>
 #include <fstream>
 #include <type_traits>
 #include <xdrpp/iniparse.h>
+#include "missingfunc.hh"
 
 namespace xdr {
 

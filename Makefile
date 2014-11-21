@@ -14,7 +14,7 @@ LIBDIRS := -Llibclient
 LIBS := -lclient `$(PKGCONFIG) --libs xdrpp` -ldl
 
 CFLAGS := -ggdb3 -O0 -pthread
-CXXFLAGS := -ggdb3 -O0 -pthread -std=c++11
+CXXFLAGS := -ggdb3 -O0 -pthread -std=c++11 -U__STRICT_ANSI__
 LDFLAGS := -g -pthread $(LIBDIRS)
 
 default: all
