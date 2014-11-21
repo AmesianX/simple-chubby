@@ -36,7 +36,6 @@ template<typename T> class chubby_service_base : public chubby_service_base_inte
         || chdr.body.cbody().prog != prog_ || chdr.body.cbody().vers != vers_)
       return;
 
-    // Build response header.
     uint32_t xid = chdr.xid;
 
     if (!interface::call_dispatch(*this, chdr.body.cbody().proc,

@@ -54,6 +54,7 @@ void chubby_server::accept_cb() {
   set_close_on_exec(fd);
   msg_sock *ms = new msg_sock(ps_, fd);
   SessionId session_id = registerSession(fd, ms);
+  std::cout << " New session #" << session_id << std::endl;
   ms->setrcb(std::bind(&chubby_server::receive_cb, this, session_id,
 		       std::placeholders::_1));
 }
@@ -72,7 +73,12 @@ void chubby_server::receive_cb(SessionId session_id, msg_ptr mp) {
 }
 
 void chubby_server::asynchronized_dispatch(SessionId session_id, msg_ptr mp) {
-  msg_sock* ms = sessionid_to_msgsock_map_[session_id];
+  auto iter_ms = sessionid_to_msgsock_map_.find(session_id);
+  if (iter_ms == sessionid_to_msgsock_map_.end()) {
+    std::cerr << "Session id is invalid." << std::endl;
+    return;
+  }
+  msg_sock* ms = iter_ms->second;
   // ms->putmsg
   // Unmarshell the message.
   xdr_get g(mp);
