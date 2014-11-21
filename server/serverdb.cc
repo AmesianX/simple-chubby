@@ -279,7 +279,7 @@ ServerDB::getParentName(const string &key)
 	return string(key, 0, pos);  // create a substring of key
 }
 
-#if 1
+#if 0
 
 int
 main(int argc, const char *argv[])

@@ -1,9 +1,9 @@
 // -*- C++ -*-
-// Automatically generated from server.x.
+// Automatically generated from include/server.x.
 // DO NOT EDIT or your changes may be overwritten
 
-#ifndef __XDR_SERVER_HH_INCLUDED__
-#define __XDR_SERVER_HH_INCLUDED__ 1
+#ifndef __XDR_INCLUDE_SERVER_HH_INCLUDED__
+#define __XDR_INCLUDE_SERVER_HH_INCLUDED__ 1
 
 #include <xdrpp/types.h>
 
@@ -947,4 +947,4 @@ struct api_v1 {
   };
 };
 
-#endif // !__XDR_SERVER_HH_INCLUDED__
+#endif // !__XDR_INCLUDE_SERVER_HH_INCLUDED__
