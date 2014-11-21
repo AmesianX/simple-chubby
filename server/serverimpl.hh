@@ -6,12 +6,15 @@
 #define __XDR_SERVER_SERVERIMPL_HH_INCLUDED__ 1
 
 #include "include/server.hh"
+#include "include/event.hh"
 
 namespace xdr {
 class chubby_server;
-};
+}  // namespace xdr
+
 class test_version_server {
 public:
+  using interface = test_version_event;
   test_version_server(xdr::chubby_server* server) : chubby_server_(server) {}
   using rpc_interface_type = test_version;
 

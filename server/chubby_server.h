@@ -1,6 +1,7 @@
 #ifndef _SERVER_CHUBBY_SERVER_INCLUDED_
 #define _SERVER_CHUBBY_SERVER_INCLUDED_ 1
 
+#include <unistd.h>
 #include <map>
 #include <xdrpp/server.h>
 
@@ -106,11 +107,27 @@ class chubby_server {
       .areply().reply_data.stat(SUCCESS);
     sessionid_to_msgsock_map_[session_id]->putmsg(xdr_to_msg(rhdr, *result));
   }
+  template<typename P> bool send(SessionId session_id,
+      const typename P::arg_wire_type& arg) {
+    rpc_msg hdr;
+    hdr.xid = ++xid_send_counter_;
+    hdr.body.mtype(CALL);
+    hdr.body.cbody().rpcvers = 2;
+    hdr.body.cbody().prog = P::interface_type::program;
+    hdr.body.cbody().vers = P::interface_type::version;
+    hdr.body.cbody().proc = P::proc;
+    int fd = sessionid_to_fd_map_[session_id];
+    msg_ptr m(xdr_to_msg(hdr, arg));
+    ssize_t n = write(fd, m->raw_data(), m->raw_size());
+    assert(std::size_t(n) == m->raw_size());
+  }
+
  private:
   std::map<int, SessionId> fd_to_sessionid_map_;
   std::map<SessionId, int> sessionid_to_fd_map_;
   std::map<SessionId, msg_sock*> sessionid_to_msgsock_map_;
   SessionId session_id_allocator_ {0};
+  uint32_t xid_send_counter_ {0};
   SessionId registerSession(int fd, msg_sock* ms) {
     SessionId session_id = ++session_id_allocator_;
     fd_to_sessionid_map_[fd] =session_id;

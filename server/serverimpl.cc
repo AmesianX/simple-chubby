@@ -12,6 +12,8 @@ test_version_server::increment(std::unique_ptr<int> arg,
   std::unique_ptr<int> res(new int);
   *res = *arg + 1;
   chubby_server_->reply(session_id, xid, std::move(res));
+  chubby_server_->send<interface::print_event_t>(session_id,
+                                                 std::string("test_inc"));
   return res;
 }
 
@@ -22,5 +24,7 @@ test_version_server::decrement(std::unique_ptr<int> arg,
   std::unique_ptr<int> res(new int);
   *res = *arg - 1;
   chubby_server_->reply(session_id, xid, std::move(res));
+  chubby_server_->send<interface::print_event_t>(session_id,
+                                                 std::string("test_dec"));
   return res;
 }
