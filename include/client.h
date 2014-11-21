@@ -22,8 +22,9 @@ public:
 
     int increment(int input);
     int decrement(int input);
+    void getEvent();
 private:
-    xdr::srpc_client<test_version> *client;
+    xdr::chubby_client_handler<test_version> *client;
 };
 
 #endif /* __CLIENT_H__ */

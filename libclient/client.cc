@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <xdrpp/srpc.h>
+#include <server/chubby_client.h>
 #include <xdrpp/socket.h>
 
 #include <include/rpcconfig.h>
@@ -28,7 +29,7 @@ void Client::open(const std::string &host) {
   }
 
   auto fd = tcp_connect(host.c_str(), UNIQUE_RPC_PORT);
-  client = new srpc_client<test_version>{fd.release()};
+  client = new chubby_client_handler<test_version>{fd.release()};
 }
 
 void Client::close() {
@@ -50,4 +51,8 @@ int Client::increment(int input) {
 int Client::decrement(int input) {
   auto r = client->decrement(input);
   return *r;
+}
+
+void Client::getEvent() {
+  client->getEvent();
 }
