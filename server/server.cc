@@ -19,7 +19,7 @@ using namespace xdr;
 int main(int argc, const char *argv[])
 {
     xdr::chubby_server chubby_server(tcp_listen(UNIQUE_RPC_PORT, AF_INET));
-    test_version_server s(&chubby_server);
+    api_v1_server s(&chubby_server);
 
     try {
         chubby_server.register_service(s);

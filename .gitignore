@@ -6,6 +6,8 @@
 README.html
 include/server.h
 server/server
+server/serverdb
+*.db
 server/server.exe
 shell/shell
 shell/shell.exe

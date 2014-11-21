@@ -25,7 +25,7 @@ include shell/Makefile
 
 .PHONY: all clean xdrpp
 
-all: xdrpp include/server.hh include/event.hh libclient/libclient.a server/server shell/shell 
+all: xdrpp include/server.hh libclient/libclient.a server/server shell/shell 
 
 include/server.hh: include/server.x
 	$(XDRC) -hh -o include/server.hh $<

@@ -82,6 +82,7 @@ const uint64_t CREATE_FILE = 0x8;
 // If neither CREATE_DIRECTORY or CREATE_FILE flag is set, it opens a node,
 // and return FAIL if the node does not exists.
 // If both CREATE_DIRECTORY and CREATE_FILE flags are set, throw exception.
+// If client has already opened node FILE_NAME, throw exception
 FileHandlerId open(const std::string& file_name, mode_t mode);
 
 // Closes the file handler identifier, and further calls using the file
@@ -89,11 +90,11 @@ FileHandlerId open(const std::string& file_name, mode_t mode);
 void close(FileHandlerId file_handler_id);
 
 // Deletes a node if it has no children, returns false if the node does not
-// exist or cannot not be deleted because it has children. Throws exception
-// otherwise.
+// exist or cannot not be deleted because it has children or its lock is held. 
+// Throws exception otherwise.
 // Further access of the same instance number of the file by any
 // Chubby users will be denied.
-bool delete(const std::string& file_name);
+bool delete(FileHandlerId file_handler_id);
 
 // Retrieves the file content and the meta-data of a file, returns true.
 // Throws exception otherwise.

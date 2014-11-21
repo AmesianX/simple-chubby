@@ -1,5 +1,9 @@
 
-SERVER_SRC := server/server.cc server/serverimpl.cc server/chubby_server.cc server/chubby_client.cc
+SERVER_SRC := server/server.cc server/serverimpl.cc server/chubby_server.cc server/chubby_client.cc \
+			  server/serverdb.cc \
+			  server/sqlstmt.cc \
+			  server/sqlite3.c
+
 
 SERVER_OBJ := $(SERVER_SRC:.c=.o)
 SERVER_OBJ := $(SERVER_OBJ:.cc=.o)
@@ -18,3 +22,16 @@ scaffold: include/server.x xdrpp
 
 server/server: $(SERVER_OBJ)
 	$(LD) -o $@ $(LDFLAGS) $(SERVER_OBJ) $(LIBS)
+
+# test serverdb
+server/serverdb: server/sqlite3.o server/sqlstmt.o server/serverdb.o
+	$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
+	rm -f test.db
+	server/serverdb
+
+
+server/serverimpl: server/sqlite3.o server/sqlstmt.o server/serverdb.o  server/serverimpl.o
+	$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
+	rm chubbystore.db
+	server/serverimpl
+

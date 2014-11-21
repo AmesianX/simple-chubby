@@ -23,8 +23,19 @@ public:
     int increment(int input);
     int decrement(int input);
     void getEvent();
+
+    /* Chubby APIs */
+    FileHandler fileOpen(const std::string &file_name, Mode mode);
+    void fileClose(const FileHandler &fd);
+    bool fileDelete(const FileHandler &fd);
+    bool getContentsAndStat(const FileHandler &fd, FileContent *file_content, MetaData *meta_data);
+    bool setContents(const FileHandler &fd, const FileContent &file_content);
+    void acquire(const FileHandler &fd);
+    bool tryAcquire(const FileHandler &fd);
+    void release(const FileHandler &fd);
+
 private:
-    xdr::chubby_client_handler<test_version> *client;
+    xdr::chubby_client_handler<api_v1> *client;
 };
 
 #endif /* __CLIENT_H__ */
