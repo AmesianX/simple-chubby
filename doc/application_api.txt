@@ -131,6 +131,24 @@ If the function call successfully reaches the master, and its semantics is
 well defined, the function call should not throw exception but returns a
 failure instead.
 
-2.5. To do.
+2.5. Events.
 
-Event and sequencer are not added to the API yet.
+Events delivered to Chubby clients should be wrapped in a object of
+class "EventContent", and the object should describe:
+(i) what the event is. For example, which file the event is about.
+(2) the category of the event, e.g. lock modification/file content
+modification.
+
+class EventContent;  // Store the content to be delivered to chubby clients.
+
+The user should provide a callback that the Chubby client library invokes
+when an event is received form the Chubby server.
+
+typedef std::function<void(std::unique_ptr<EventContent>)> EventCallback;
+
+The API of opening file should be changed:
+
+FileHandlerId open(const std::string& file_name, mode_t mode, EventCallback user_call_back);
+
+After a file is successfully closed by a Chubby client, the events related
+to the file will not be delivered.
