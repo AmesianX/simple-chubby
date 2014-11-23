@@ -41,6 +41,43 @@ void Cmd_Decrement(int argc, const char *argv[]) {
   cout << result << endl;
 }
 
+void Cmd_FileOpen(int argc, const char *argv[]) {
+  if (argc != 3) {
+    cout << "Usage: fileOpen FILENAME MODE" << endl;
+    return;
+  }
+  int mode =  strtol(argv[2], 0, 10);
+  auto result = client.fileOpen(argv[1],mode);
+  cout << result << endl;
+}
+
+void Cmd_FileClose(int argc, const char *argv[]) {
+  if (argc != 2) {
+    cout << "Usage: fileClose FD_ID" << endl;
+    return;
+  }
+  int fd = strtol(argv[1], 0, 10);
+  client.fileClose(fd);
+}
+
+void Cmd_FileDelete(int argc, const char *argv[])
+{
+  if (argc != 2) {
+    cout << "Usage: fileDelete FD_ID" << endl;
+    return;
+  }
+
+  try {
+    int fd = strtol(argv[1], 0, 10);
+    if (client.fileDelete(fd))
+      cout << "Deleted" << endl;
+    else
+      cout << "Failed" << endl;
+  } catch (ClientException &e) {
+    cout << e.what() << endl;
+  }
+}
+  
 void
 DispatchCommand(char *buf)
 {
@@ -67,6 +104,14 @@ DispatchCommand(char *buf)
         Cmd_Increment(argc, (const char **)argv);
     } else if (cmd == "decrement") {
         Cmd_Decrement(argc, (const char **)argv);
+    } else if (cmd == "fileOpen") {
+        Cmd_FileOpen(argc, (const char **)argv);
+    } else if (cmd == "fileClose") {
+        Cmd_FileClose(argc, (const char **)argv);
+    } else if (cmd == "fileDelete") {
+        Cmd_FileDelete(argc, (const char **)argv);
+    } else if (cmd == "exit") {
+        exit(0);
     } else if (cmd == "#") {
         // Ignore comments
     } else if (cmd != "") {

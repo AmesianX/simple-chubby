@@ -2,16 +2,46 @@
 #ifndef __CLIENT_H__
 #define __CLIENT_H__
 
+#include <cstdint>
+#include <vector>
+
+
+typedef uint64_t FileHandlerId;
+
+const FileHandlerId FAIL = 0;
 
 const uint64_t READ = 0x1;
 const uint64_t WRITE = 0x2;
 const uint64_t CREATE_DIRECTORY = 0x4;
 const uint64_t CREATE_FILE = 0x8;
 
-enum ErrorCode_t {
-  NO_ERROR,
+enum ClientError {
+  /* Bad arguments for the API call. */
   BAD_ARG,
+  /* Operation fails in the filesystem. */
   FS_FAIL
+};
+
+/*
+ * For server and/or library errors that must delivered to the client
+ */
+class ClientException : public std::exception {
+public:
+ClientException(enum ClientError err) { errcode = err; }
+virtual ~ClientException() { }
+    ClientError code() const { return errcode; }
+    const char *what() {
+        switch (errcode) {
+	case BAD_ARG:
+                return "BAD ARGUMENT";
+	case FS_FAIL:
+                return "FAILS IN FILESYSTEM";
+	default:
+	  return "UNKNOWN ERROR CODE";
+	}
+    }
+private:
+    enum ClientError errcode;
 };
 
 
@@ -39,11 +69,11 @@ public:
     void getEvent();
 
     /* Chubby APIs */
-    FileHandler fileOpen(const std::string &file_name, Mode mode);
-    void fileClose(const FileHandler &fd);
-    bool fileDelete(const FileHandler &fd);
+    FileHandlerId fileOpen(const std::string &file_name, Mode mode);
+    void fileClose(const FileHandlerId fd);
+    bool fileDelete(const FileHandlerId fd);
     bool getContentsAndStat(const FileHandler &fd,
-			    FileContent *file_content, MetaData *meta_data);
+			      FileContent *file_content, MetaData *meta_data);
     bool setContents(const FileHandler &fd, const FileContent &file_content);
     void acquire(const FileHandler &fd);
     bool tryAcquire(const FileHandler &fd);
@@ -51,6 +81,7 @@ public:
 
 private:
     xdr::chubby_client_handler<api_v1> *client;
+    std::vector<FileHandler> fdList;
 };
 
 #endif /* __CLIENT_H__ */

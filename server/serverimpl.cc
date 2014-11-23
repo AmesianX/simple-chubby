@@ -13,11 +13,13 @@ const uint64_t WRITE = 0x2;
 const uint64_t CREATE_DIRECTORY = 0x4;
 const uint64_t CREATE_FILE = 0x8;
 
-enum ErrorCode_t {
-  NO_ERROR,
+enum ClientError {
   BAD_ARG,
   FS_FAIL
 };
+
+using std::cout;
+using std::endl;
 
 
 std::unique_ptr<int>
@@ -87,8 +89,8 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   // Create file or dir
   if((mode & CREATE_DIRECTORY) || (mode & CREATE_DIRECTORY)) {
     bool is_dir = mode & CREATE_DIRECTORY;
-    ++this->instance_number;
-    // check file doesn't exist and parent exits
+    ++(this->instance_number);
+
     if(!db.checkAndCreate(file_name, is_dir, this->instance_number)) {
       // creation failed, then return false
       res->discriminant(1);
@@ -124,7 +126,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   // add FD to <client, list of FDs> map
   // std::map<uint64_t, std::list<FileHandler* > > client2fd_map;
   client2fd_map[client_id].push_back(fd);
-     
+
   // return normally with FD
   res->discriminant(0);
   res->val() = *fd;
@@ -186,8 +188,8 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   // try to delete in the database
   if(!db.checkAndDelete(fd->file_name, fd->instance_number)) {
     // Delete failed, return false
-    res->discriminant(1);
-    res->errCode() = FS_FAIL;
+    res->discriminant(0);
+    res->val() = false;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
