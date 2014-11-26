@@ -1,0 +1,56 @@
+A skeleton of the two applications we will show.
+
+APPLICATION 1. Leader election.
+
+Leader election is an application that elects one host out of a given group
+of hosts as the leader. At any given time, at most one host among the
+group is elected as the leader, and other hosts in the group are able to
+find out which host is the leader, if it exists.
+
+In SimpleChubby, the application is implemented as follow:
+
+There is one file named "leader" that stores the identifier of the leader
+if it exists.
+1. Open the file "leader". Register the file modification event. Read the
+file to figure out who is the leader if it exists.
+2. Once the file "leader" is changed, read the file to figure out the new
+leader if it exists. This is done synchronized.
+3. Try to acquire the lock of the file, and once succeed, write the file to
+record that the host that have acquired the lock is the owner.
+
+Figuring out the leader, which means reading the file, does not require
+locking.
+
+Our implementation should be able to survive client side failure and server
+side failure for this application.
+
+APPLICATION 2. Double barrier.
+
+Double barrier is a barrier that specifies a given number of hosts
+to proceed as a group. When the number of hosts that enter the barrier
+reaches the specified number, the same set of hosts will be allowed
+to leave the barrier.
+
+In SimpleChubby, the application is implemented as follow:
+
+They will be two files, 'passed' and 'in_barrier'.
+The specified number of the barrier is noted as Q.
+
+1. Open the file 'in_barrier', and try to lock it.
+
+2. After getting the lock, examine the file 'in_barrier' to figure out
+which hosts are in the barrier:
+2.1. If the host is the first one that enters the barrier, write in the file
+that it enters the barrier and assigns a new barrier identification.
+2.2. If the host is not the first one that enters the barrier and the number
+of hosts that have entered the barrier (excluding itself) is less than Q-1, write in the file that it enters the barrier.
+2.3. If the number of hosts that have entered the barrier is Q-1, write in
+the file 'passed' that this barrier can be passed. Clean up the file
+'in_barrier'.
+
+3. After going through step 2, listen to the file modification event of the
+file 'passed' to figure out when it can leave the barrier.
+
+The implementation should survive server failure. When a client enters
+a barrier and fails, it will be counted as one towards the specified number
+Q.
