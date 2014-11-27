@@ -126,13 +126,16 @@ class chubby_server {
   std::map<int, SessionId> fd_to_sessionid_map_;
   std::map<SessionId, int> sessionid_to_fd_map_;
   std::map<SessionId, msg_sock*> sessionid_to_msgsock_map_;
+  std::map<SessionId, std::string> sessionid_to_clientid_map_;
   SessionId session_id_allocator_ {0};
   uint32_t xid_send_counter_ {0};
-  SessionId registerSession(int fd, msg_sock* ms) {
+  SessionId registerSession(int fd, msg_sock* ms,
+                            const std::string& client_id) {
     SessionId session_id = ++session_id_allocator_;
     fd_to_sessionid_map_[fd] =session_id;
     sessionid_to_fd_map_[session_id] = fd;
     sessionid_to_msgsock_map_[session_id] = ms;
+    sessionid_to_clientid_map_[session_id] = client_id;
     return session_id;
   }
   void deregisterSession(SessionId session_id) {
@@ -142,7 +145,14 @@ class chubby_server {
     fd_to_sessionid_map_.erase(fd);
     sessionid_to_fd_map_.erase(session_id);
     sessionid_to_msgsock_map_.erase(session_id);
-    std::cout << "Turned donw Session #" << session_id << std::endl;
+    sessionid_to_clientid_map_.erase(session_id);
+    std::cout << "Shut down Session #" << session_id << std::endl;
+  }
+ public:
+  std::string getClientId(SessionId session_id) {
+    auto iter = sessionid_to_clientid_map_.find(session_id);
+    assert(iter != sessionid_to_clientid_map_.end());
+    return *iter;
   }
 
 };

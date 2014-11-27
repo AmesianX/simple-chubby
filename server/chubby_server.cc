@@ -53,8 +53,14 @@ void chubby_server::accept_cb() {
   }
   set_close_on_exec(fd);
   msg_sock *ms = new msg_sock(ps_, fd);
-  SessionId session_id = registerSession(fd, ms);
-  std::cout << " New session #" << session_id << std::endl;
+  sockaddr saddr;
+  socklen_t slen;
+  getpeername(fd, &saddr, &slen);
+  std::string host, serv;
+  get_numinfo(&saddr, slen, &host, &serv);
+  SessionId session_id = registerSession(fd, ms, host + serv);
+  std::cout << " New session #" << session_id << " " << host << " "
+      << serv << std::endl;
   ms->setrcb(std::bind(&chubby_server::receive_cb, this, session_id,
 		       std::placeholders::_1));
 }
