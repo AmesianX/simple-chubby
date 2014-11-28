@@ -152,7 +152,7 @@ class chubby_server {
   std::string getClientId(SessionId session_id) {
     auto iter = sessionid_to_clientid_map_.find(session_id);
     assert(iter != sessionid_to_clientid_map_.end());
-    return *iter;
+    return iter->second;
   }
 
 };
