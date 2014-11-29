@@ -13,7 +13,7 @@ using net_address_t = xdr::xstring<>;
 
 struct viewid_t {
   std::uint64_t counter{};
-  cit_t manager{};
+  cid_t manager{};
 };
 namespace xdr {
 template<> struct xdr_traits<::viewid_t>
@@ -234,7 +234,7 @@ private:
   std::uint32_t ok_;
   union {
     xdr::opaque_vec<> reply_;
-    execcute_viewinfo viewinfo_;
+    execute_viewinfo viewinfo_;
   };
 
 public:
@@ -323,12 +323,12 @@ public:
       return reply_;
     throw xdr::xdr_wrong_union("execute_res: reply accessed when not selected");
   }
-  execcute_viewinfo &viewinfo() {
+  execute_viewinfo &viewinfo() {
     if (_xdr_field_number(ok_) == 2)
       return viewinfo_;
     throw xdr::xdr_wrong_union("execute_res: viewinfo accessed when not selected");
   }
-  const execcute_viewinfo &viewinfo() const {
+  const execute_viewinfo &viewinfo() const {
     if (_xdr_field_number(ok_) == 2)
       return viewinfo_;
     throw xdr::xdr_wrong_union("execute_res: viewinfo accessed when not selected");

@@ -13,7 +13,7 @@ Types to describe a view.
 */
 struct viewid_t {
   unsigned hyper counter;
-  cit_t manager;
+  cid_t manager;
 };
 
 struct viewstamp_t {
@@ -65,7 +65,7 @@ union execute_res switch (bool ok) {
   case TRUE:
     opaque reply<>;
   case FALSE:
-    execcute_viewinfo viewinfo;
+    execute_viewinfo viewinfo;
 };
 
 /*

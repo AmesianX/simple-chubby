@@ -22,10 +22,11 @@ default: all
 include server/Makefile
 include libclient/Makefile
 include shell/Makefile
+include paxos/Makefile
 
 .PHONY: all clean xdrpp
 
-all: xdrpp paxos/paxos.hh include/server.hh libclient/libclient.a server/server shell/shell 
+all: xdrpp paxos/paxos.hh include/server.hh libclient/libclient.a server/server shell/shell paxos/paxos_replica
 
 paxos/paxos.hh: paxos/paxos.x
 	$(XDRC) -hh -o paxos/paxos.hh $<

@@ -12,3 +12,4 @@ server/server.exe
 shell/shell
 shell/shell.exe
 Makefile.local
+paxos/paxos_replica
