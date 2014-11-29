@@ -25,7 +25,10 @@ include shell/Makefile
 
 .PHONY: all clean xdrpp
 
-all: xdrpp include/server.hh libclient/libclient.a server/server shell/shell 
+all: xdrpp paxos/paxos.hh include/server.hh libclient/libclient.a server/server shell/shell 
+
+paxos/paxos.hh: paxos/paxos.x
+	$(XDRC) -hh -o paxos/paxos.hh $<
 
 include/server.hh: include/server.x
 	$(XDRC) -hh -o include/server.hh $<
