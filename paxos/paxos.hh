@@ -477,7 +477,7 @@ template<> struct xdr_traits<::view_change_reject>
 struct view_change_accept {
   cid_t myid{};
   viewstamp_t latest{};
-  xdr::pointer<view_t> newview{};
+  view_t newview{};
 };
 namespace xdr {
 template<> struct xdr_traits<::view_change_accept>

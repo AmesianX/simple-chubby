@@ -106,7 +106,8 @@ struct view_change_accept {
   cid_t myid;
   // bool include_me;
   viewstamp_t latest;
-  view_t *newview;
+  // view_t *newview;
+  view_t newview;
 };
 union view_change_res
     switch (bool accepted) {
