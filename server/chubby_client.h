@@ -5,6 +5,7 @@
 #include <list>
 #include <mutex>
 #include <condition_variable>
+#include <tuple>
 #include <unistd.h>
 #include <xdrpp/exception.h>
 #include <xdrpp/rpc_msg.hh>
@@ -22,7 +23,8 @@ class chubby_client {
   std::thread bgth_;
   pollset ps_;
 
-  std::list<std::unique_ptr<xdr_get>> reply_queue_;
+  typedef std::tuple<rpc_msg, std::unique_ptr<xdr_get>> queue_msg_t;
+  std::list<queue_msg_t> reply_queue_;
   std::mutex lk_;
   std::condition_variable cv_;
 
@@ -74,11 +76,11 @@ public:
     {
       std::unique_lock<std::mutex> lock(lk_);
       cv_.wait(lock, [this]{ return !reply_queue_.empty(); });
-      g = std::move(reply_queue_.front());
+      hdr = std::get<0>(reply_queue_.front());
+      g = std::move(std::get<1>(reply_queue_.front()));
       reply_queue_.pop_front();
     }
 
-    archive(*g, hdr);
     check_call_hdr(hdr);
     if (hdr.xid != xid)
       throw xdr_runtime_error("chubby_client: unexpected xid");
