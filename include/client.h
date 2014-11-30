@@ -66,7 +66,6 @@ public:
 
     int increment(int input);
     int decrement(int input);
-    void getEvent();
 
     /* Chubby APIs */
     FileHandlerId fileOpen(const std::string &file_name, Mode mode);

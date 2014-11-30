@@ -60,10 +60,6 @@ int Client::decrement(int input) {
   return *r;
 }
 
-void Client::getEvent() {
-  client->getEvent();
-}
-
 FileHandlerId
 Client::fileOpen(const std::string &file_name, Mode mode)
 {

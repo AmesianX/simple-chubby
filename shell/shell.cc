@@ -149,12 +149,6 @@ RunScript(const char *file)
     }
 }
 
-void keepGetEvent(Client* client) {
-  while (true) {
-    client->getEvent();
-  }
-}
-
 int
 main(int argc, const char *argv[])
 {
@@ -173,9 +167,6 @@ main(int argc, const char *argv[])
         cout << "Exception: " << e.what() << endl;
         return 1;
     }
-
-    std::thread event_thread(std::bind(keepGetEvent, &client));
-    event_thread.detach();
 
     // Either execute script or prompt
     try {
