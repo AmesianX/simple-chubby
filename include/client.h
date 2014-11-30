@@ -81,6 +81,8 @@ public:
 private:
     xdr::chubby_client_handler<api_v1> *client;
     std::vector<FileHandler> fdList;
+    
+    void printFdList();
 };
 
 #endif /* __CLIENT_H__ */

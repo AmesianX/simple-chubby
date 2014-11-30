@@ -42,14 +42,16 @@ ServerDB::hasName(const string &path)
 bool
 ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number)
 {
-  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<", "<<instance_number<<endl;
+  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<", "<<instance_number;
   string parent_name = getParentName(file_name);
   bool file_exists = hasName(file_name);
   bool parent_exists = parent_name.compare("/") == 0 ||  // root dir ('/') always exists
     hasName(parent_name);
     
-  if (file_exists || !parent_exists)
+  if (file_exists || !parent_exists){
+    cout<< " fails."<<endl;
     return false;
+  }
   // TODO check parent is directory
 
   // begins to create the file
@@ -58,6 +60,7 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t ins
 	  file_name.c_str(), instance_number, is_dir);
   // TODO update the content field of parent dir
   sqlexec("COMMIT;");
+  cout<< " succeeds."<<endl;
 
 
   return true;
@@ -66,9 +69,12 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t ins
 bool
 ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 {
+  cout<<"db: checkAndOpen("<<file_name<<", "<<instance_number;
   bool file_exists = hasName(file_name);
-  if (!file_exists)
+  if (!file_exists) {
+    cout<< " fails."<<endl;
     return false;
+  }
 
   SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
             file_name.c_str());
@@ -79,6 +85,7 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
     throw runtime_error("Key not present");
   }
   *instance_number = s.integer(0);
+  cout<< " succeeds."<<endl;
 
   return true;
 }
@@ -87,24 +94,30 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 bool 
 ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
 {
+  cout<<"db: checkAndDelete("<<file_name<<", "<<instance_number;
   SQLStmt s(db, "SELECT lock_owner, instance_number, is_directory FROM fs WHERE name = \"%s\"",
             file_name.c_str());
 
   s.step();
   if (!s.row()) {
     // node does not exist
+    cout<< " fails. node does not exist"<<endl;
     return false;
   }
 
   // check lock is held
   uint64_t lock_owner = s.integer(0);
-  if (lock_owner != 0)
+  if (lock_owner != 0) {
+    cout<< " fails. lock is held"<<endl;
     return false;
+  }
 
   // check INSTANCE_NUMBER
   uint64_t node_instance_number = s.integer(1);
-  if (node_instance_number != instance_number)
+  if (node_instance_number != instance_number){
+    cout<< " fails. instance_number doesn't match"<<endl;
     return false;
+  }
 
   // check dir is empty
   bool is_dir = s.integer(2);
@@ -113,14 +126,18 @@ ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
     SQLStmt s(db, "SELECT name FROM fs WHERE name LIKE '%s/%%'",
 	      file_name.c_str());
     s.step();
-    if (s.row()) // if returned non-empty result
+    if (s.row()) {
+      // if returned non-empty result
+      cout<< " fails. dir is not empty"<<endl;
       return false;
+    }
   }
 
   // delete 
   sqlexec("BEGIN;");
   sqlexec("DELETE FROM fs WHERE name = \"%s\";", file_name.c_str());
   sqlexec("COMMIT;");
+  cout<< " succeeds."<<endl;
     
   return true;
 }
