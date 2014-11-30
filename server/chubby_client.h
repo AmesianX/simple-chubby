@@ -23,8 +23,7 @@ class chubby_client {
   std::thread bgth_;
   pollset ps_;
 
-  typedef std::tuple<rpc_msg, std::unique_ptr<xdr_get>> queue_msg_t;
-  std::list<queue_msg_t> reply_queue_;
+  std::list<msg_ptr> reply_queue_;
   std::mutex lk_;
   std::condition_variable cv_;
 
@@ -72,22 +71,23 @@ public:
     write_message(fd_, xdr_to_msg(hdr, a));
 
     // wait for reply
-    std::unique_ptr<xdr_get> g;
+    msg_ptr m;
     {
       std::unique_lock<std::mutex> lock(lk_);
       cv_.wait(lock, [this]{ return !reply_queue_.empty(); });
-      hdr = std::get<0>(reply_queue_.front());
-      g = std::move(std::get<1>(reply_queue_.front()));
+      m = std::move(reply_queue_.front());
       reply_queue_.pop_front();
     }
 
+    xdr_get g(m);
+    archive(g, hdr);
     check_call_hdr(hdr);
     if (hdr.xid != xid)
       throw xdr_runtime_error("chubby_client: unexpected xid");
 
     std::unique_ptr<typename P::res_wire_type> r{new typename P::res_wire_type};
-    archive(*g, *r);
-    if (g->p_ != g->e_)
+    archive(g, *r);
+    if (g.p_ != g.e_)
       throw xdr_bad_message_size("chubby_client: "
                                  "did not consume whole message");
     if (xdr_trace_client) {

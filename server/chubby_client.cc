@@ -46,7 +46,7 @@ void chubby_client::bg_recv_cb(msg_sock *ms, msg_ptr mp) {
       {
         // mutex region begin
         std::lock_guard<std::mutex> lock(lk_);
-        reply_queue_.push_back(make_tuple(hdr, std::move(g)));
+        reply_queue_.push_back(std::move(mp));
         // mutex region end
       }
       cv_.notify_one();
