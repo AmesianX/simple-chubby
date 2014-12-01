@@ -69,11 +69,12 @@ public:
 
     /* Chubby APIs */
     FileHandlerId fileOpen(const std::string &file_name, Mode mode);
-    void fileClose(const FileHandlerId fdId);
-    bool fileDelete(const FileHandlerId fdId);
-    bool getContentsAndStat(const FileHandler &fd,
-			      FileContent *file_content, MetaData *meta_data);
-    bool setContents(const FileHandler &fd, const FileContent &file_content);
+    void fileClose(FileHandlerId fdId);
+    bool fileDelete(FileHandlerId fdId);
+    bool getContentsAndStat(FileHandlerId fdId,
+			    FileContent *file_content, 
+			    MetaData *meta_data);
+    bool setContents(FileHandlerId fdId, const FileContent &file_content);
     void acquire(const FileHandler &fd);
     bool tryAcquire(const FileHandler &fd);
     void release(const FileHandler &fd);

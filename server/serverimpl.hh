@@ -16,7 +16,7 @@
 #include <string>
 
 struct ClientFdPair {
-  uint64_t client;
+  std::string client;
   FileHandler *fd;
 
   bool operator==(const ClientFdPair &rhs) const {
@@ -71,7 +71,7 @@ public:
 
   
 private:
-  FileHandler *findFd(uint64_t client_id, const FileHandler &fd);
+  FileHandler *findFd(std::string client_id, const FileHandler &fd);
   bool checkName(const std::string &file_name);
 
   ServerDB db;
@@ -79,7 +79,7 @@ private:
   uint64_t master_sequence_number;
   std::mt19937_64 rand_gen;
   std::unordered_map<std::string, std::list<ClientFdPair> > file2fd_map;
-  std::unordered_map<uint64_t, std::list<FileHandler *> > client2fd_map;
+  std::unordered_map<std::string, std::list<FileHandler *> > client2fd_map;
 
   xdr::chubby_server* chubby_server_;
 

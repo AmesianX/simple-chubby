@@ -94,7 +94,7 @@ Client::fileOpen(const std::string &file_name, Mode mode)
 }
 
 void 
-Client::fileClose(const FileHandlerId fdId)
+Client::fileClose(FileHandlerId fdId)
 {
     FileHandler args;
 
@@ -110,7 +110,7 @@ Client::fileClose(const FileHandlerId fdId)
 }
 
 bool 
-Client::fileDelete(const FileHandlerId fdId)
+Client::fileDelete(FileHandlerId fdId)
 {
     FileHandler args;
 
@@ -130,28 +130,39 @@ Client::fileDelete(const FileHandlerId fdId)
 }
 
 bool 
-Client::getContentsAndStat(const FileHandler &fd, 
+Client::getContentsAndStat(FileHandlerId fdId, 
 			   FileContent *file_content, MetaData *meta_data)
 {
-    FileHandler args;
+  FileHandler args;
     
+  auto it = fdList.find(fdId);
+  if(it != fdList.end()) {
+    args = it->second;
     auto r = client->getContentsAndStat(args);
-    *file_content = r->val().content;
-    *meta_data = r->val().stat;
-
-    return true;
+    if(r->discriminant() == 0) {
+      // RPC returned normally
+      *file_content = r->val().content;
+      *meta_data = r->val().stat;
+      return true;
+    }
+  }
+  return false;
 }
 
 bool 
-Client::setContents(const FileHandler &fd, const FileContent &file_content)
+Client::setContents(FileHandlerId fdId, const FileContent &file_content)
 {
-    ArgSetContents args;
-    args.fd = fd;
-    args.content = file_content;
-    
-    auto r = client->setContents(args);
+  ArgSetContents args;
 
-    return r->val();
+  auto it = fdList.find(fdId);
+  if(it != fdList.end()) {
+    args.fd = it->second;
+    args.content = file_content;  
+    auto r = client->setContents(args);
+    if(r->discriminant() == 0)
+      return r->val();
+  }
+  return false;
 }
 
 

@@ -81,7 +81,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   std::unique_ptr<RetFd> res(new RetFd);
   std::string file_name = arg->name;
   Mode mode = arg->mode;
-  uint64_t client_id = 123; // TODO
+  std::string client_id = chubby_server_->getClientId(session_id);
 
   cout<<"\nserver: fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
 
@@ -166,7 +166,7 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
 			 xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  uint64_t client_id = 123; // TODO
+  std::string client_id = chubby_server_->getClientId(session_id);
   
   cout<<"\nserver: fileClose: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
 
@@ -203,7 +203,7 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
                           xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  uint64_t client_id = 123; // TODO
+  std::string client_id = chubby_server_->getClientId(session_id);
   
   cout<<"\nserver: fileDelete: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
   
@@ -229,7 +229,7 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   // remove all FDs in file2fd_map[fd->file_name]
   std::list<ClientFdPair> l = file2fd_map[arg->file_name];
   for (auto it = l.begin(); it != l.end(); ++it) {
-    uint64_t c = it->client;
+    std::string c = it->client;
     FileHandler *f = it->fd;
     // remove this FD in client2fd_map
     client2fd_map[c].remove(f);
@@ -255,7 +255,7 @@ api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg,
                                   xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetContentsAndStat> res(new RetContentsAndStat);
-  uint64_t client_id = 123; // TODO
+  std::string client_id = chubby_server_->getClientId(session_id);
   
   FileHandler *fd = findFd(client_id, *arg);
   if(fd == nullptr) {
@@ -270,7 +270,8 @@ api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg,
   // try to read in the database
   if(!db.checkAndRead(fd->file_name, fd->instance_number, &content, &meta)) {
     // Read failed
-    // TODO throw an exception
+    res->discriminant(1);
+    res->errCode() = FS_FAIL;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
@@ -288,7 +289,7 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
                            xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  uint64_t client_id = 123; // TODO
+  std::string client_id = chubby_server_->getClientId(session_id);
   
   FileHandler *fd = findFd(client_id, arg->fd);
   if(fd == nullptr) {
@@ -301,7 +302,8 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
   // try to update in the database
   if(!db.checkAndUpdate(fd->file_name, fd->instance_number, arg->content)) {
     // Update failed
-    // TODO throw an exception
+    res->discriminant(1);
+    res->errCode() = FS_FAIL;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
@@ -309,6 +311,7 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
   // return normally with TRUE value
   res->discriminant(0);
   res->val() = true;
+  chubby_server_->reply(session_id, xid, std::move(res));
   return res;
 }
 
@@ -317,6 +320,7 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
                        xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
+  std::string client_id = chubby_server_->getClientId(session_id);
   
   // Fill in function body here
   
@@ -328,6 +332,7 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
                           xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
+  std::string client_id = chubby_server_->getClientId(session_id);
   
   // Fill in function body here
   
@@ -339,6 +344,7 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
                        xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
+  std::string client_id = chubby_server_->getClientId(session_id);
   
   // Fill in function body here
   
@@ -377,7 +383,7 @@ api_v1_server::checkName(const std::string &key)
 
 
 FileHandler *
-api_v1_server::findFd(uint64_t client_id, const FileHandler &fd)
+api_v1_server::findFd(std::string client_id, const FileHandler &fd)
 {
   std::list<FileHandler *> l = client2fd_map[client_id];
     
