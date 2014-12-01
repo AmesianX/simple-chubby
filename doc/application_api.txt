@@ -135,16 +135,26 @@ failure instead.
 
 Events delivered to Chubby clients should be wrapped in a object of
 class "EventContent", and the object should describe:
-(i) what the event is. For example, which file the event is about.
-(2) the category of the event, e.g. lock modification/file content
-modification.
+(1) the category of the event, e.g. lock owner changed or file content modified;
+(2) which file the event is about. If exists contains the file name, otherwise is empty.
 
-class EventContent;  // Store the content to be delivered to chubby clients.
+enum ChubbyEvent {
+  NOP = 0,
+  LOCK_CHANGED,
+  CONTENT_MODIFIED,
+  // ...
+};
+
+struct EventContent {  // Store the content to be delivered to chubby clients
+  ChubbyEvent event;
+  std::string file_name;
+};
 
 The user should provide a callback that the Chubby client library invokes
-when an event is received form the Chubby server.
+when an event is received form the Chubby server. One callback for each event.
+The argument for the callback is the file name.
 
-typedef std::function<void(std::unique_ptr<EventContent>)> EventCallback;
+typedef std::function<void(std::string)> EventCallback;
 
 The API of opening file should be changed:
 
@@ -152,3 +162,4 @@ FileHandlerId open(const std::string& file_name, mode_t mode, EventCallback user
 
 After a file is successfully closed by a Chubby client, the events related
 to the file will not be delivered.
+

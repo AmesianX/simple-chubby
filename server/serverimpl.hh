@@ -30,7 +30,7 @@ namespace xdr {
 
 class api_v1_server {
 public:
-  using interface = test_version_event;  // Interface for event.
+  using event_interface = handler_v1;  // Interface for event.
   using rpc_interface_type = api_v1;
 
   api_v1_server(xdr::chubby_server* server)

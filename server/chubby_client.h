@@ -12,6 +12,8 @@
 #include <xdrpp/pollset.h>
 #include <xdrpp/srpc.h>
 
+#include "include/event.hh"
+
 namespace xdr {
 
 extern bool xdr_trace_client;
@@ -20,34 +22,45 @@ class chubby_client {
 
   const int fd_;
 
-  std::thread bgth_;
+  std::thread pollth_;
   pollset ps_;
 
-  std::list<msg_ptr> reply_queue_;
-  std::mutex lk_;
-  std::condition_variable cv_;
+  std::thread evcbth_;
+  std::list<msg_ptr> event_queue_;
+  std::mutex elk_;
+  std::condition_variable ecv_;
 
-  // events
-  enum Event {
-    // TODO: define others
-    NOP,
-  };
-  // client callback
-  using ccb_t = std::function<void()>;
-  std::unordered_map<int, ccb_t> ccbs_;
+  std::list<msg_ptr> reply_queue_;
+  std::mutex rlk_;
+  std::condition_variable rcv_;
+
+  // client event callback
+  // one callback for each event
+  typedef std::function<void(std::string)> EventCallback;
+  std::unordered_map<int, EventCallback> ecbs_;
 
 private:
+  using evP = handler_v1::event_callback_t;
+
   static void moveret(std::unique_ptr<xdr_void> &) {}
   template<typename T> static T &&moveret(T &t) { return std::move(t); }
 
-  void bg_loop();
-  void bg_recv_cb(msg_sock *ms, msg_ptr mp);
+  void poll_loop();
+  void evcb_loop();
+  void poll_recv_cb(msg_sock *ms, msg_ptr mp);
 
 public:
   chubby_client(int fd);
   ~chubby_client();
   chubby_client(chubby_client &&c);
   chubby_client(const chubby_client &c) = delete;
+
+  void register_callback(ChubbyEvent e, EventCallback cb) {
+    ecbs_[static_cast<int>(e)] = cb;
+  }
+  void delete_callback(ChubbyEvent e) {
+    ecbs_.erase(static_cast<int>(e));
+  }
 
   template<typename P> typename P::res_type invoke() {
     return this->template invoke<P>(xdr::xdr_void{});
@@ -73,8 +86,8 @@ public:
     // wait for reply
     msg_ptr m;
     {
-      std::unique_lock<std::mutex> lock(lk_);
-      cv_.wait(lock, [this]{ return !reply_queue_.empty(); });
+      std::unique_lock<std::mutex> lock(rlk_);
+      rcv_.wait(lock, [this]{ return !reply_queue_.empty(); });
       m = std::move(reply_queue_.front());
       reply_queue_.pop_front();
     }

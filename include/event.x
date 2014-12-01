@@ -1,6 +1,19 @@
-typedef string eventname<>;
-program test_program_event {
-  version test_version_event {
-       void print_event(eventname) = 77;
-  } = 299;
+
+typedef string FileName<>;
+
+enum ChubbyEvent {
+  NOP = 0,
+  LOCK_CHANGED = 0x100,
+  CONTENT_MODIFIED = 0x200,
+};
+
+struct EventContent {
+  ChubbyEvent event;
+  FileName fname;
+};
+
+program event_handler {
+  version handler_v1 {
+      void event_callback(EventContent) = 77;
+  } = 1;
 } = 0x40048086;
