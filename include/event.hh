@@ -7,33 +7,83 @@
 
 #include <xdrpp/types.h>
 
-using eventname = xdr::xstring<>;
+using FileName = xdr::xstring<>;
 
-struct test_version_event {
+enum ChubbyEvent : std::uint32_t {
+  NOP = 0,
+  LOCK_CHANGED = 0x100,
+  CONTENT_MODIFIED = 0x200,
+};
+namespace xdr {
+template<> struct xdr_traits<::ChubbyEvent>
+  : xdr_integral_base<::ChubbyEvent, std::uint32_t> {
+  static constexpr bool is_enum = true;
+  static constexpr bool is_numeric = false;
+  static const char *enum_name(::ChubbyEvent val) {
+    switch (val) {
+    case ::NOP:
+      return "NOP";
+    case ::LOCK_CHANGED:
+      return "LOCK_CHANGED";
+    case ::CONTENT_MODIFIED:
+      return "CONTENT_MODIFIED";
+    default:
+      return nullptr;
+    }
+  }
+};
+}
+
+struct EventContent {
+  ChubbyEvent event{};
+  FileName fname{};
+};
+namespace xdr {
+template<> struct xdr_traits<::EventContent>
+  : xdr_struct_base<field_ptr<::EventContent,
+                              decltype(::EventContent::event),
+                              &::EventContent::event>,
+                    field_ptr<::EventContent,
+                              decltype(::EventContent::fname),
+                              &::EventContent::fname>> {
+  template<typename Archive> static void
+  save(Archive &ar, const ::EventContent &obj) {
+    archive(ar, obj.event, "event");
+    archive(ar, obj.fname, "fname");
+  }
+  template<typename Archive> static void
+  load(Archive &ar, ::EventContent &obj) {
+    archive(ar, obj.event, "event");
+    archive(ar, obj.fname, "fname");
+  }
+};
+}
+
+struct handler_v1 {
   static constexpr std::uint32_t program = 1074036870;
-  static constexpr const char *program_name = "test_program_event";
-  static constexpr std::uint32_t version = 299;
-  static constexpr const char *version_name = "test_version_event";
+  static constexpr const char *program_name = "event_handler";
+  static constexpr std::uint32_t version = 1;
+  static constexpr const char *version_name = "handler_v1";
 
-  struct print_event_t {
-    using interface_type = test_version_event;
+  struct event_callback_t {
+    using interface_type = handler_v1;
     static constexpr std::uint32_t proc = 77;
-    static constexpr const char *proc_name = "print_event";
-    using arg_type = eventname;
-    using arg_wire_type = eventname;
+    static constexpr const char *proc_name = "event_callback";
+    using arg_type = EventContent;
+    using arg_wire_type = EventContent;
     using res_type = void;
     using res_wire_type = xdr::xdr_void;
     
     template<typename C, typename...A> static auto
     dispatch(C &&c, A &&...a) ->
-    decltype(c.print_event(std::forward<A>(a)...)) {
-      return c.print_event(std::forward<A>(a)...);
+    decltype(c.event_callback(std::forward<A>(a)...)) {
+      return c.event_callback(std::forward<A>(a)...);
     }
     
     template<typename C, typename DropIfVoid, typename...A> static auto
     dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
-    decltype(c.print_event(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
-      return c.print_event(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    decltype(c.event_callback(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.event_callback(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
     }
   };
 
@@ -41,7 +91,7 @@ struct test_version_event {
   call_dispatch(T &&t, std::uint32_t proc, A &&...a) {
     switch(proc) {
     case 77:
-      t.template dispatch<print_event_t>(std::forward<A>(a)...);
+      t.template dispatch<event_callback_t>(std::forward<A>(a)...);
       return true;
     }
     return false;
@@ -51,9 +101,9 @@ struct test_version_event {
     using _XDRBASE::_XDRBASE;
 
     template<typename..._XDRARGS> auto
-    print_event(_XDRARGS &&..._xdr_args) ->
-    decltype(this->_XDRBASE::template invoke<print_event_t>(_xdr_args...)) {
-      return this->_XDRBASE::template invoke<print_event_t>(_xdr_args...);
+    event_callback(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<event_callback_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<event_callback_t>(_xdr_args...);
     }
   };
 };

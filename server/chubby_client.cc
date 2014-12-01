@@ -1,5 +1,5 @@
 #include "server/chubby_client.h"
-#include "xdrpp/socket.h"
+#include <xdrpp/socket.h>
 
 namespace xdr {
 
@@ -36,31 +36,58 @@ void chubby_client::bg_recv_cb(msg_sock *ms, msg_ptr mp) {
     delete ms;
     return;
   }
-  try {
-    rpc_msg hdr;
-    std::unique_ptr<xdr_get> g(new xdr_get(mp));
-    archive(*g, hdr);
 
-    // for replies, push to the \c reply_queue_
-    if (hdr.body.mtype() == REPLY) {
-      {
-        // mutex region begin
-        std::lock_guard<std::mutex> lock(lk_);
-        reply_queue_.push_back(std::move(mp));
-        // mutex region end
-      }
-      cv_.notify_one();
-    }
+  // Get header
+  rpc_msg hdr;
+  std::unique_ptr<xdr_get> g(new xdr_get(mp));
+  archive(*g, hdr);
 
-    // for calls (events), call callbacks directly
-    if (hdr.body.mtype() == CALL) {
-      // TODO
-      std::clog << "An event received, do nothing for now";
+  // For replies, push to the \c reply_queue_
+  if (hdr.body.mtype() == REPLY) {
+    {
+      // mutex region begin
+      std::lock_guard<std::mutex> lock(lk_);
+      reply_queue_.push_back(std::move(mp));
+      // mutex region end
     }
+    cv_.notify_one();
   }
-  catch (const xdr_runtime_error &e) {
-    std::cerr << e.what() << std::endl;
-    delete ms;
+
+  // For calls (events), call callbacks directly
+  if (hdr.body.mtype() == CALL) {
+    try {
+      // check rpc version.
+      if (hdr.body.cbody().rpcvers != 2)
+        throw xdr_runtime_error("chubby_client: "
+                                "rpc version doesn't match for event message");
+      // check program
+      if (hdr.body.cbody().prog != evP::interface_type::program)
+        throw xdr_runtime_error("chubby_client: "
+                                "rpc event program doesn't match for event message");
+      // check version
+      if (hdr.body.cbody().vers != evP::interface_type::version)
+        throw xdr_runtime_error("chubby_client: "
+                                "rpc event version doesn't match for event message");
+
+      evP::arg_wire_type arg;
+      archive(*g, arg);
+      if (g->p_ != g->e_)
+        throw xdr_bad_message_size("chubby_client: "
+                                   "did not consume whole message");
+
+      auto func = ecbs_.find(static_cast<int>(arg.event));
+      if (func != ecbs_.end())
+        func->second(arg.fname);
+      else {
+        std::string s = "No callback registered for event ";
+        s += std::to_string(arg.event);
+        std::clog << s << std::endl;
+      }
+    }
+    catch (const xdr_runtime_error &e) {
+      std::cerr << e.what() << std::endl;
+      delete ms;
+    }
   }
 }
 

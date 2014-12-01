@@ -28,11 +28,13 @@ api_v1_server::increment(std::unique_ptr<int> arg,
 {
   std::unique_ptr<int> res(new int);
   *res = *arg + 1;
-  chubby_server_->send<interface::print_event_t>(session_id,
-                                                 std::string("running_inc_event"));
+  EventContent evc;
+  evc.event = ChubbyEvent::NOP;
+  evc.fname = std::string("inc");
+  chubby_server_->send<event_interface::event_callback_t>(session_id, evc);
   chubby_server_->reply(session_id, xid, std::move(res));
-  chubby_server_->send<interface::print_event_t>(session_id,
-                                                 std::string("test_inc_event"));
+  evc.fname = std::string("inc done");
+  chubby_server_->send<event_interface::event_callback_t>(session_id, evc);
   return res;
 }
 
@@ -42,11 +44,13 @@ api_v1_server::decrement(std::unique_ptr<int> arg,
 {
   std::unique_ptr<int> res(new int);
   *res = *arg - 1;
-  chubby_server_->send<interface::print_event_t>(session_id,
-                                                 std::string("running_dec_event"));
+  EventContent evc;
+  evc.event = ChubbyEvent::NOP;
+  evc.fname = std::string("dec");
+  chubby_server_->send<event_interface::event_callback_t>(session_id, evc);
   chubby_server_->reply(session_id, xid, std::move(res));
-  chubby_server_->send<interface::print_event_t>(session_id,
-                                                 std::string("test_dec_event"));
+  evc.fname = std::string("dec done");
+  chubby_server_->send<event_interface::event_callback_t>(session_id, evc);
   return res;
 }
 
