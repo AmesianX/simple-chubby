@@ -3,7 +3,7 @@
 #define __CLIENT_H__
 
 #include <cstdint>
-#include <vector>
+#include <map>
 
 
 typedef uint64_t FileHandlerId;
@@ -69,8 +69,8 @@ public:
 
     /* Chubby APIs */
     FileHandlerId fileOpen(const std::string &file_name, Mode mode);
-    void fileClose(const FileHandlerId fd);
-    bool fileDelete(const FileHandlerId fd);
+    void fileClose(const FileHandlerId fdId);
+    bool fileDelete(const FileHandlerId fdId);
     bool getContentsAndStat(const FileHandler &fd,
 			      FileContent *file_content, MetaData *meta_data);
     bool setContents(const FileHandler &fd, const FileContent &file_content);
@@ -79,10 +79,11 @@ public:
     void release(const FileHandler &fd);
 
 private:
-    xdr::chubby_client_handler<api_v1> *client;
-    std::vector<FileHandler> fdList;
+  xdr::chubby_client_handler<api_v1> *client;
+  std::map<uint64_t, FileHandler> fdList;
+  FileHandlerId nextFdId; /* FileHandlerId of the next  */
     
-    void printFdList();
+  void printFdList();
 };
 
 #endif /* __CLIENT_H__ */

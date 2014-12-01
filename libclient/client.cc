@@ -18,6 +18,7 @@ Client::Client()
   : fdList()
 {
   client = NULL;
+  nextFdId = 1;
 }
 
 Client::~Client() {
@@ -37,9 +38,10 @@ void Client::open(const std::string &host) {
 void Client::close() {
   if (isConnected()) {
     // close all opened FDs
-    for(auto fd : fdList)
-      client->fileClose(fd);
+    for(auto& kv : fdList)
+      client->fileClose(kv.second);
     fdList.clear();
+    nextFdId = 1;
     
     delete client;
     client = NULL;
@@ -64,10 +66,11 @@ void
 Client::printFdList()
 {
   cout<<"fdList:"<<endl;
-  for(int i = 0; i < fdList.size(); i++){
-    auto fd = fdList[i];
-    cout<<i+1<<" "<<fd.file_name<<" "<<fd.instance_number
-	<<" "<<fd.magic_number<<endl;
+  for(auto& kv : fdList){
+    auto fd = kv.second;
+    cout<<"\t"<< kv.first 
+	<<" ("<<fd.file_name<<", "<<fd.instance_number
+	<<", "<<fd.magic_number<<")"<<endl;
   }
 }
 
@@ -82,21 +85,23 @@ Client::fileOpen(const std::string &file_name, Mode mode)
   if (r->discriminant() == 0) {
     // returned with a valid FD
     FileHandler fd = r->val();
-    fdList.push_back(fd);
+    uint64_t fdId = nextFdId++; 
+    fdList[fdId] = fd;
     printFdList();
-    return fdList.size(); // FileHandlerId is index+1
+    return fdId;
   }
   return FAIL; // return FAIL
 }
 
 void 
-Client::fileClose(const FileHandlerId fd)
+Client::fileClose(const FileHandlerId fdId)
 {
     FileHandler args;
 
-    if(fd-1 < fdList.size()) {
-      args = fdList[fd-1]; // index is FileHandlerId-1
-      fdList.erase(fdList.begin() + fd - 1); 
+    auto it = fdList.find(fdId);
+    if(it != fdList.end()) {
+      args = it->second;
+      fdList.erase(it); 
       // fileClose always suceeds
       auto r = client->fileClose(args);
     }
@@ -105,12 +110,13 @@ Client::fileClose(const FileHandlerId fd)
 }
 
 bool 
-Client::fileDelete(const FileHandlerId fd)
+Client::fileDelete(const FileHandlerId fdId)
 {
     FileHandler args;
 
-    if(fd-1 < fdList.size())
-      args = fdList[fd-1]; // index is FileHandlerId-1
+    auto it = fdList.find(fdId);
+    if(it != fdList.end())
+      args = it->second;
     else
       throw ClientException(static_cast<ClientError>(BAD_ARG));
     

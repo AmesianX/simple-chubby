@@ -152,7 +152,6 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   // return normally with FD
   res->discriminant(0);
   res->val() = *fd;
-  cout << "fileOpen finished."<<endl;
   printFd();
   chubby_server_->reply(session_id, xid, std::move(res));
   return res;
