@@ -21,6 +21,26 @@ enum ClientError {
 using std::cout;
 using std::endl;
 
+void
+api_v1_server::printFd()
+{
+  cout << "\tfile2fd_map:" << endl;
+  for (auto it = file2fd_map.begin(); it != file2fd_map.end(); it++) {
+    cout << "\t\t file: "<< it->first<<endl;
+    for (auto pair : it->second)
+      cout<< "\t\t\t client: "<<pair.client
+	  << ", FD: ("<< (pair.fd)->file_name
+	  << ", "<< (pair.fd)->instance_number<<")"<<endl;
+  }
+
+  cout << "\tclient2fd_map:" <<endl;
+  for (auto it = client2fd_map.begin(); it != client2fd_map.end(); it++) {
+    cout << "\t\t client: "<< it->first<<endl;
+    for (auto fd : it->second)
+      cout << "\t\t\t FD: ("<< fd ->file_name
+	   << ", "<< fd->instance_number<<")"<<endl;
+  }
+}
 
 std::unique_ptr<int>
 api_v1_server::increment(std::unique_ptr<int> arg,
@@ -59,6 +79,8 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   Mode mode = arg->mode;
   uint64_t client_id = 123; // TODO
 
+  cout<<"\nserver: fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
+
   if(!checkName(file_name)) {
     // return with error
     res->discriminant(1);
@@ -67,7 +89,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
     return res;
   }   
   
-  if((mode & CREATE_DIRECTORY) && (mode & CREATE_DIRECTORY)) {
+  if((mode & CREATE_DIRECTORY) && (mode & CREATE_FILE)) {
     // return with error
     res->discriminant(1);
     res->errCode() = BAD_ARG;
@@ -131,6 +153,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   res->discriminant(0);
   res->val() = *fd;
   cout << "fileOpen finished."<<endl;
+  printFd();
   chubby_server_->reply(session_id, xid, std::move(res));
   return res;
 }
@@ -142,6 +165,8 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   std::unique_ptr<RetBool> res(new RetBool);
   uint64_t client_id = 123; // TODO
   
+  cout<<"\nserver: fileClose: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
+
   FileHandler *fd = findFd(client_id, *arg);
   if(fd == nullptr) {
     // No match FD found
@@ -165,6 +190,7 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   // return normally with TRUE value
   res->discriminant(0);
   res->val() = true;
+  printFd();
   chubby_server_->reply(session_id, xid, std::move(res));
   return res;
 }
@@ -176,7 +202,7 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   std::unique_ptr<RetBool> res(new RetBool);
   uint64_t client_id = 123; // TODO
   
-  cout<<"fileDelete: "<< arg->file_name << "\t "<< arg->instance_number<<endl;
+  cout<<"\nserver: fileDelete: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
   
   FileHandler *fd = findFd(client_id, *arg);
   if(fd == nullptr) {
@@ -198,23 +224,25 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   }
   
   // remove all FDs in file2fd_map[fd->file_name]
-  std::list<ClientFdPair> l = file2fd_map[fd->file_name];
+  std::list<ClientFdPair> l = file2fd_map[arg->file_name];
   for (auto it = l.begin(); it != l.end(); ++it) {
-    uint64_t c = (*it).client;
-    FileHandler *f = (*it).fd;
+    uint64_t c = it->client;
+    FileHandler *f = it->fd;
     // remove this FD in client2fd_map
     client2fd_map[c].remove(f);
+    if(client2fd_map[c].size() == 0)
+      client2fd_map.erase(c);
     // free space
     delete f;
   }  
   // remove the list in file2fd_map
-  size_t r = file2fd_map.erase(fd->file_name);
-  cout<<"r="<<r<<endl;
+  int r = file2fd_map.erase(arg->file_name);
   assert(r == 1);
   
   // return normally with TRUE value
   res->discriminant(0);
   res->val() = true;
+  printFd();
   chubby_server_->reply(session_id, xid, std::move(res));
   return res;
 }
@@ -352,9 +380,11 @@ api_v1_server::findFd(uint64_t client_id, const FileHandler &fd)
     
   for(auto it = l.begin(); it != l.end(); ++it) {
     FileHandler *p = *it;
+    /*
     cout << "findFd: "<< p->instance_number
 	 << p->magic_number << p->master_sequence_number
 	 << p->file_name << p->write_is_allowed<<endl;
+    */
     if (p->instance_number == fd.instance_number &&
 	p->magic_number == fd.magic_number &&
 	p->master_sequence_number == fd.master_sequence_number &&

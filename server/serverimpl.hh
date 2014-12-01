@@ -10,7 +10,7 @@
 #include "serverdb.h"
 #include <cstdint>
 #include <random>
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <list>
 #include <string>
@@ -78,10 +78,12 @@ private:
   uint64_t instance_number;
   uint64_t master_sequence_number;
   std::mt19937_64 rand_gen;
-  std::map<std::string, std::list<ClientFdPair> > file2fd_map;
-  std::map<uint64_t, std::list<FileHandler *> > client2fd_map;
+  std::unordered_map<std::string, std::list<ClientFdPair> > file2fd_map;
+  std::unordered_map<uint64_t, std::list<FileHandler *> > client2fd_map;
 
   xdr::chubby_server* chubby_server_;
+
+  void printFd();
 };
 
 #endif // !__XDR_SERVER_SERVERIMPL_HH_INCLUDED__
