@@ -91,7 +91,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   
   FileHandler *fd = new FileHandler();
   // Create file or dir
-  if((mode & CREATE_DIRECTORY) || (mode & CREATE_DIRECTORY)) {
+  if((mode & CREATE_DIRECTORY) || (mode & CREATE_FILE)) {
     bool is_dir = mode & CREATE_DIRECTORY;
     ++(this->instance_number);
 
@@ -134,6 +134,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   // return normally with FD
   res->discriminant(0);
   res->val() = *fd;
+  cout << "fileOpen finished."<<endl;
   chubby_server_->reply(session_id, xid, std::move(res));
   return res;
 }
@@ -179,6 +180,8 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   std::unique_ptr<RetBool> res(new RetBool);
   uint64_t client_id = 123; // TODO
   
+  cout<<"fileDelete: "<< arg->file_name << "\t "<< arg->instance_number<<endl;
+  
   FileHandler *fd = findFd(client_id, *arg);
   if(fd == nullptr) {
     // No match FD found
@@ -210,6 +213,7 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   }  
   // remove the list in file2fd_map
   size_t r = file2fd_map.erase(fd->file_name);
+  cout<<"r="<<r<<endl;
   assert(r == 1);
   
   // return normally with TRUE value
@@ -352,6 +356,9 @@ api_v1_server::findFd(uint64_t client_id, const FileHandler &fd)
     
   for(auto it = l.begin(); it != l.end(); ++it) {
     FileHandler *p = *it;
+    cout << "findFd: "<< p->instance_number
+	 << p->magic_number << p->master_sequence_number
+	 << p->file_name << p->write_is_allowed<<endl;
     if (p->instance_number == fd.instance_number &&
 	p->magic_number == fd.magic_number &&
 	p->master_sequence_number == fd.master_sequence_number &&

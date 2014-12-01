@@ -60,6 +60,17 @@ int Client::decrement(int input) {
   return *r;
 }
 
+void
+Client::printFdList()
+{
+  cout<<"fdList:"<<endl;
+  for(int i = 0; i < fdList.size(); i++){
+    auto fd = fdList[i];
+    cout<<i+1<<" "<<fd.file_name<<" "<<fd.instance_number
+	<<" "<<fd.magic_number<<endl;
+  }
+}
+
 FileHandlerId
 Client::fileOpen(const std::string &file_name, Mode mode)
 {
@@ -70,7 +81,9 @@ Client::fileOpen(const std::string &file_name, Mode mode)
   auto r = client->fileOpen(args);
   if (r->discriminant() == 0) {
     // returned with a valid FD
-    fdList.push_back(r->val());
+    FileHandler fd = r->val();
+    fdList.push_back(fd);
+    printFdList();
     return fdList.size(); // FileHandlerId is index+1
   }
   return FAIL; // return FAIL
@@ -81,12 +94,13 @@ Client::fileClose(const FileHandlerId fd)
 {
     FileHandler args;
 
-    if( fd < fdList.size()) {
+    if(fd-1 < fdList.size()) {
       args = fdList[fd-1]; // index is FileHandlerId-1
       fdList.erase(fdList.begin() + fd - 1); 
       // fileClose always suceeds
       auto r = client->fileClose(args);
     }
+    printFdList();
     return;
 }
 
@@ -95,16 +109,17 @@ Client::fileDelete(const FileHandlerId fd)
 {
     FileHandler args;
 
-    if(fd < fdList.size())
+    if(fd-1 < fdList.size())
       args = fdList[fd-1]; // index is FileHandlerId-1
     else
       throw ClientException(static_cast<ClientError>(BAD_ARG));
     
-    auto r = client->fileClose(args);
+    auto r = client->fileDelete(args);
     if (r->discriminant() == 1) {
 	// throw a proper exception
 	throw ClientException(static_cast<ClientError>(r->errCode()));
     }
+    printFdList();
     return r->val();
 }
 
