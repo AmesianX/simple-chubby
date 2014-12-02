@@ -1,3 +1,4 @@
+#include <iostream>
 #include "paxos/replica_client_set.hh"
 
 std::pair<std::string, std::string> ReplicaClientSet::analyzeNetworkAddress(
@@ -76,6 +77,7 @@ ReplicaClientSet::ReplicaClientType* ReplicaClientSet::getReplicaClient(
     return nullptr;
   }
 }
+
 void ReplicaClientSet::releaseReplicaClient(int rank_id) {
   pthread_mutex_unlock(&replica_client_list_[rank_id].lock);
 }

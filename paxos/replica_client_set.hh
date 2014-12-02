@@ -26,6 +26,7 @@ class ReplicaClientSet {
       replica_client = nullptr;
     }
     ReplicaClientState(const ReplicaClientState&) {
+      // Copy is invoked, but content is not copied.
       pthread_mutex_init(&lock, nullptr);
       replica_client = nullptr;
     }
@@ -46,10 +47,10 @@ class ReplicaClientSet {
   ReplicaClientSet(std::vector<net_address_t> other_replicas);
   ~ReplicaClientSet();
 
-  // Try to connect all the replica client channel.
+  // Tries to connect all the replica client channels.
   void tryConnect();
 
-  // Returns the size of all replica client channel.
+  // Returns the size of all replica client channels.
   int getSize() const {
     return replica_client_list_.size();
   }
@@ -58,7 +59,7 @@ class ReplicaClientSet {
   // if the channel is not built yet.
   ReplicaClientType* getReplicaClient(
       int rank_id);
-  // Release the replica client. Because the replica client is single-threaded.
+  // Releases the replica client. Because the replica client is single-threaded.
   void releaseReplicaClient(int rank_id);
 
  private:
