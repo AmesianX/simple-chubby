@@ -48,6 +48,8 @@ clean:
 	rm -f libclient/libclient.a
 	rm -f shell/*.o
 	rm -f shell/shell
+	rm -f paxos/*.o
+	rm -f paxos/paxos_replica
 	! test -f xdrpp/Makefile || cd xdrpp && $(MAKE) clean
 
 README.html: README.md

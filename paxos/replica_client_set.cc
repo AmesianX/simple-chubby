@@ -1,14 +1,8 @@
 #include <iostream>
+#include "paxos/helper.hh"
 #include "paxos/replica_client_set.hh"
 
-std::pair<std::string, std::string> ReplicaClientSet::analyzeNetworkAddress(
-    const net_address_t& network_address) {
-  std::string::size_type colon_pos = network_address.find(":");
-  assert(colon_pos != std::string::npos);
-  return std::make_pair(network_address.substr(0, colon_pos),
-                        network_address.substr(colon_pos + 1));
-}
-
+// Breaks the network address to host name and port name.
 ReplicaClientSet::ReplicaClientSet(
     const std::map<int, net_address_t>& other_replicas) {
   pthread_mutex_init(&start_connecting_lock_, nullptr);
@@ -33,7 +27,7 @@ void ReplicaClientSet::detectFailure(
   pthread_mutex_lock(&replica_client->lock);
   std::cerr << "Link to " << replica_client->network_address
       << " is hung up." << std::endl;
-  replica_client->fd.release();
+  replica_client->fd.clear();
   delete replica_client->replica_client;
   replica_client->replica_client = nullptr;
   pthread_mutex_unlock(&replica_client->lock);
@@ -49,6 +43,7 @@ void ReplicaClientSet::tryConnect() {
       try {
         state.fd = xdr::tcp_connect(std::get<0>(host_and_port).c_str(),
                                     std::get<1>(host_and_port).c_str());
+        std::cout << "Connected: " << state.network_address << std::endl;
         xdr::set_close_on_exec(state.fd.get());
         state.replica_client = new ReplicaClientType(state.fd.get());
         std::thread detect_thread(std::bind(

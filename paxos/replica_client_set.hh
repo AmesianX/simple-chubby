@@ -37,10 +37,6 @@ class ReplicaClientSet {
     }
   };
 
-  // Breaks the network address to host name and port name.
-  std::pair<std::string, std::string> analyzeNetworkAddress(
-      const net_address_t& network_address);
-
   // A thread to detect whether the socket peer hangs up the socket.
   void detectFailure(ReplicaClientState* replica_client);
 
