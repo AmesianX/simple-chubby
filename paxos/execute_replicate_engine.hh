@@ -10,7 +10,11 @@ class ReplicaState;
 class ExecuteReplicateEngine {
  public:
   ExecuteReplicateEngine(ReplicaState* replica_state,
-                         ReplicaClientSet* replica_client_set) {}
+                         ReplicaClientSet* replica_client_set) {
+    replica_state_ = replica_state;
+    replica_client_set_ = replica_client_set_;
+  }
+  void replicateCommand(const init_view_request& request);
  private:
   ReplicaState* replica_state_;
   ReplicaClientSet* replica_client_set_;

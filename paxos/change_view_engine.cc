@@ -1,12 +1,16 @@
 #include "paxos/replica_client_set.hh"
 #include "paxos/replica_state.hh"
+#include "paxos/execute_replicate_engine.hh"
 
 #include "paxos/change_view_engine.hh"
 
 ChangeViewEngine::ChangeViewEngine(ReplicaState* replica_state,
-                                   ReplicaClientSet* replica_client_set) {
+                                   ReplicaClientSet* replica_client_set,
+                                   ExecuteReplicateEngine*
+                                   execute_replicate_engine) {
   replica_state_ = replica_state;
   replica_client_set_ = replica_client_set;
+  execute_replicate_engine_ = execute_replicate_engine;
 }
 
 void ChangeViewEngine::sleep_random() {
@@ -52,7 +56,7 @@ int ChangeViewEngine::getNewLeaderRank() {
   return result;
 }
 
-void ChangeViewEngine::NotifyNewLeader() {
+bool ChangeViewEngine::NotifyNewLeader() {
   // Cannot handle if the leader wakes up again.
   assert(isLeaderDown());
   int rank = getNewLeaderRank();
@@ -65,7 +69,7 @@ void ChangeViewEngine::NotifyNewLeader() {
         replica_state_->getClientUseAddress(rank);
     replica_state_->mode = ReplicaState::VC_ACTIVE;
     std::cout << "[LEADER] Becomes leader!" << std::endl;
-    // Broadcast itself.
+    return false;
   } else {
     std::cout << "Tries to notify the new leader: " << rank << std::endl;
     auto* replica_client = replica_client_set_->getReplicaClient(rank);
@@ -75,6 +79,7 @@ void ChangeViewEngine::NotifyNewLeader() {
     replica_client->init_view(init_view_instruction);
     replica_client_set_->releaseReplicaClient(rank);
     replica_state_->mode = ReplicaState::VC_ACTIVE;
+    return true;
   }
 }
 
@@ -84,8 +89,13 @@ void ChangeViewEngine::run() {
     if (replica_state_->mode == ReplicaState::VC_MANAGER) {
       std::cout << "Try to initiate view change." << std::endl;
       // Begin initiate a view change.
-      NotifyNewLeader();
+      bool becomeLeader = NotifyNewLeader();
+      init_view_request command;
+      command.newview = replica_state_->view;
       replica_state_->EndAccess();
+      if (becomeLeader) {
+        execute_replicate_engine_->replicateCommand(command);
+      }
       continue;
     }
     if (isLeaderDown()) {

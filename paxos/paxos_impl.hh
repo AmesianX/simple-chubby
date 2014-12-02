@@ -7,12 +7,18 @@
 
 #include "paxos/paxos.hh"
 
+class ReplicaClientSet;
 class ReplicaState;
+class ExecuteReplicateEngine;
 
 class paxos_v1_server {
  public:
-  explicit paxos_v1_server(ReplicaState* replica_state) {
+  paxos_v1_server(ReplicaState* replica_state,
+                  ReplicaClientSet* replica_client_set,
+                  ExecuteReplicateEngine* execute_replicate_engine) {
     replica_state_ = replica_state;
+    replica_client_set_ = replica_client_set;
+    execute_replicate_engine_ = execute_replicate_engine;
   }
   using rpc_interface_type = paxos_v1;
 
@@ -22,6 +28,8 @@ class paxos_v1_server {
   std::unique_ptr<init_view_res> init_view(std::unique_ptr<init_view_arg> arg);
  private:
   ReplicaState* replica_state_;
+  ReplicaClientSet* replica_client_set_;
+  ExecuteReplicateEngine* execute_replicate_engine_;
 };
 
 class paxos_client_v1_server {

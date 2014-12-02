@@ -1,8 +1,11 @@
 // Scaffolding originally generated from paxos/paxos.x.
 // Edit to add functionality.
 
-#include "paxos/paxos_impl.hh"
+#include "paxos/replica_client_set.hh"
 #include "paxos/replica_state.hh"
+#include "paxos/execute_replicate_engine.hh"
+
+#include "paxos/paxos_impl.hh"
 
 std::unique_ptr<replicate_res>
 paxos_v1_server::replicate(std::unique_ptr<replicate_arg> arg)
@@ -52,7 +55,10 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
       replica_state_->getClientUseAddress(rank);
   replica_state_->mode = ReplicaState::VC_ACTIVE;
   // Broadcast itself.
+  init_view_request command;
+  command.newview = replica_state_->view;
   replica_state_->EndAccess();
+  execute_replicate_engine_->replicateCommand(command);
   return res;
 }
 
@@ -60,8 +66,8 @@ std::unique_ptr<execute_res>
 paxos_client_v1_server::execute(std::unique_ptr<execute_arg> arg)
 {
   std::unique_ptr<execute_res> res(new execute_res);
-  
+  init_view_request request;
+  xdr::message_t message(arg->arg.request);
   // Fill in function body here
-  
   return res;
 }

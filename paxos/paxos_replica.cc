@@ -67,17 +67,22 @@ int main(int argc, char* argv[]) {
 
   std::string self_replica_address =
       replica_state.getReplicaAddress(replica_state.getSelfRank());
+
+  // Execute engine.
+  ExecuteReplicateEngine execute_replicate_engine(
+      &replica_state, &replica_client_set);
   // paxos_server.
-  paxos_v1_server paxos_server(&replica_state);
+  paxos_v1_server paxos_server(&replica_state, &replica_client_set,
+                               &execute_replicate_engine);
+
   // Starts the server side of the inter-replica channels.
   std::thread paxos_listener_thread(
       std::bind(
           paxos_listener_thread_entry,
           &paxos_server,
           analyzeNetworkPort(self_replica_address)));
-  ExecuteReplicateEngine execute_replicate_engine(
-      &replica_state, &replica_client_set);
-  ChangeViewEngine change_view_engine(&replica_state, &replica_client_set);
+  ChangeViewEngine change_view_engine(&replica_state, &replica_client_set,
+                                      &execute_replicate_engine);
   std::thread change_view_engine_thread(
       std::bind(&ChangeViewEngine::run, &change_view_engine));
 
