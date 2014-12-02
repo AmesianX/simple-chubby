@@ -765,28 +765,6 @@ struct paxos_v1 {
   static constexpr std::uint32_t version = 1;
   static constexpr const char *version_name = "paxos_v1";
 
-  struct execute_t {
-    using interface_type = paxos_v1;
-    static constexpr std::uint32_t proc = 1;
-    static constexpr const char *proc_name = "execute";
-    using arg_type = execute_arg;
-    using arg_wire_type = execute_arg;
-    using res_type = execute_res;
-    using res_wire_type = execute_res;
-    
-    template<typename C, typename...A> static auto
-    dispatch(C &&c, A &&...a) ->
-    decltype(c.execute(std::forward<A>(a)...)) {
-      return c.execute(std::forward<A>(a)...);
-    }
-    
-    template<typename C, typename DropIfVoid, typename...A> static auto
-    dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
-    decltype(c.execute(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
-      return c.execute(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
-    }
-  };
-
   struct replicate_t {
     using interface_type = paxos_v1;
     static constexpr std::uint32_t proc = 2;
@@ -878,9 +856,6 @@ struct paxos_v1 {
   template<typename T, typename...A> static bool
   call_dispatch(T &&t, std::uint32_t proc, A &&...a) {
     switch(proc) {
-    case 1:
-      t.template dispatch<execute_t>(std::forward<A>(a)...);
-      return true;
     case 2:
       t.template dispatch<replicate_t>(std::forward<A>(a)...);
       return true;
@@ -899,12 +874,6 @@ struct paxos_v1 {
 
   template<typename _XDRBASE> struct client : _XDRBASE {
     using _XDRBASE::_XDRBASE;
-
-    template<typename..._XDRARGS> auto
-    execute(_XDRARGS &&..._xdr_args) ->
-    decltype(this->_XDRBASE::template invoke<execute_t>(_xdr_args...)) {
-      return this->_XDRBASE::template invoke<execute_t>(_xdr_args...);
-    }
 
     template<typename..._XDRARGS> auto
     replicate(_XDRARGS &&..._xdr_args) ->
@@ -928,6 +897,55 @@ struct paxos_v1 {
     init_view(_XDRARGS &&..._xdr_args) ->
     decltype(this->_XDRBASE::template invoke<init_view_t>(_xdr_args...)) {
       return this->_XDRBASE::template invoke<init_view_t>(_xdr_args...);
+    }
+  };
+};
+
+struct paxo_client_v1 {
+  static constexpr std::uint32_t program = 805531765;
+  static constexpr const char *program_name = "paxos_interface";
+  static constexpr std::uint32_t version = 2;
+  static constexpr const char *version_name = "paxo_client_v1";
+
+  struct execute_t {
+    using interface_type = paxo_client_v1;
+    static constexpr std::uint32_t proc = 1;
+    static constexpr const char *proc_name = "execute";
+    using arg_type = execute_arg;
+    using arg_wire_type = execute_arg;
+    using res_type = execute_res;
+    using res_wire_type = execute_res;
+    
+    template<typename C, typename...A> static auto
+    dispatch(C &&c, A &&...a) ->
+    decltype(c.execute(std::forward<A>(a)...)) {
+      return c.execute(std::forward<A>(a)...);
+    }
+    
+    template<typename C, typename DropIfVoid, typename...A> static auto
+    dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
+    decltype(c.execute(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.execute(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    }
+  };
+
+  template<typename T, typename...A> static bool
+  call_dispatch(T &&t, std::uint32_t proc, A &&...a) {
+    switch(proc) {
+    case 1:
+      t.template dispatch<execute_t>(std::forward<A>(a)...);
+      return true;
+    }
+    return false;
+  }
+
+  template<typename _XDRBASE> struct client : _XDRBASE {
+    using _XDRBASE::_XDRBASE;
+
+    template<typename..._XDRARGS> auto
+    execute(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<execute_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<execute_t>(_xdr_args...);
     }
   };
 };

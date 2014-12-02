@@ -9,11 +9,11 @@ std::pair<std::string, std::string> ReplicaClientSet::analyzeNetworkAddress(
                         network_address.substr(colon_pos + 1));
 }
 
-ReplicaClientSet::ReplicaClientSet(std::vector<net_address_t> other_replicas) {
+ReplicaClientSet::ReplicaClientSet(
+    const std::map<int, net_address_t>& other_replicas) {
   pthread_mutex_init(&start_connecting_lock_, nullptr);
-  replica_client_list_.resize(other_replicas.size());
-  for (int i = 0; i < other_replicas.size(); ++i) {
-    replica_client_list_[i].network_address = other_replicas[i];
+  for (auto& item : other_replicas) {
+    replica_client_list_[item.first].network_address = item.second;
   }
 }
 
@@ -42,8 +42,8 @@ void ReplicaClientSet::detectFailure(
 
 void ReplicaClientSet::tryConnect() {
   pthread_mutex_lock(&start_connecting_lock_);
-  for (int i = 0; i < replica_client_list_.size(); ++i) {
-    auto& state = replica_client_list_[i];
+  for (auto& item : replica_client_list_) {
+    auto& state = item.second;
     if (!state.replica_client) {
       auto host_and_port = analyzeNetworkAddress(state.network_address);
       try {
@@ -67,6 +67,7 @@ ReplicaClientSet::ReplicaClientType* ReplicaClientSet::getReplicaClient(
     int rank_id) {
   tryConnect();
   pthread_mutex_lock(&start_connecting_lock_);
+  assert(replica_client_list_.count(rank_id) != 0);
   auto& state = replica_client_list_[rank_id];
   pthread_mutex_lock(&state.lock);
   if (state.replica_client) {
@@ -79,5 +80,6 @@ ReplicaClientSet::ReplicaClientType* ReplicaClientSet::getReplicaClient(
 }
 
 void ReplicaClientSet::releaseReplicaClient(int rank_id) {
+  assert(replica_client_list_.count(rank_id) != 0);
   pthread_mutex_unlock(&replica_client_list_[rank_id].lock);
 }

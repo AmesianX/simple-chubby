@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <functional>
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 #include "xdrpp/socket.h"
@@ -44,16 +45,11 @@ class ReplicaClientSet {
   void detectFailure(ReplicaClientState* replica_client);
 
  public:
-  ReplicaClientSet(std::vector<net_address_t> other_replicas);
+  ReplicaClientSet(const std::map<int, net_address_t>& other_replicas);
   ~ReplicaClientSet();
 
   // Tries to connect all the replica client channels.
   void tryConnect();
-
-  // Returns the size of all replica client channels.
-  int getSize() const {
-    return replica_client_list_.size();
-  }
 
   // Returns the replica client associated with a rank_id, returns nullptr
   // if the channel is not built yet.
@@ -64,7 +60,7 @@ class ReplicaClientSet {
 
  private:
   pthread_mutex_t start_connecting_lock_;
-  std::vector<ReplicaClientState> replica_client_list_;
+  std::map<int, ReplicaClientState> replica_client_list_;
 };
 
 #endif  // __PAXOS_REPLICA_CLIENT_SET_INCLUDED__

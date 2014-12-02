@@ -142,7 +142,6 @@ struct init_view_request {
 program paxos_interface {
   version paxos_v1 {
     /* Normal process. */
-    execute_res execute(execute_arg) = 1;
     replicate_res replicate(replicate_arg) = 2;
     /* View changing process. */
     view_change_res view_change(view_change_arg) = 101;
@@ -150,5 +149,8 @@ program paxos_interface {
     init_view_res init_view(init_view_arg) = 103;
     /* a special replicate followed. */
   } = 1;
+  version paxo_client_v1 {
+    execute_res execute(execute_arg) = 1;
+  } = 2;
 } = 0x30037075;
 
