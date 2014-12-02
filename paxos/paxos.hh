@@ -761,7 +761,7 @@ template<> struct xdr_traits<::init_view_request>
 
 struct paxos_v1 {
   static constexpr std::uint32_t program = 805531765;
-  static constexpr const char *program_name = "paxos_interfac";
+  static constexpr const char *program_name = "paxos_interface";
   static constexpr std::uint32_t version = 1;
   static constexpr const char *version_name = "paxos_v1";
 

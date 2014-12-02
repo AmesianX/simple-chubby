@@ -139,7 +139,7 @@ struct init_view_request {
   viewstamp_t prev;
 };
 
-program paxos_interfac {
+program paxos_interface {
   version paxos_v1 {
     /* Normal process. */
     execute_res execute(execute_arg) = 1;
