@@ -25,8 +25,10 @@ void ReplicaClientSet::detectFailure(
   poll(&poll_fd, 1, -1);
   pthread_mutex_lock(&start_connecting_lock_);
   pthread_mutex_lock(&replica_client->lock);
-  std::cerr << "Link to " << replica_client->network_address
-      << " is hung up." << std::endl;
+
+  std::cout << "[CONNECTION] Paxos channel between replica:" << std::endl
+      << "    lost connection with address: "
+      << replica_client->network_address << std::endl;
   replica_client->fd.clear();
   delete replica_client->replica_client;
   replica_client->replica_client = nullptr;
@@ -43,7 +45,9 @@ void ReplicaClientSet::tryConnect() {
       try {
         state.fd = xdr::tcp_connect(std::get<0>(host_and_port).c_str(),
                                     std::get<1>(host_and_port).c_str());
-        std::cout << "Connected: " << state.network_address << std::endl;
+        std::cout << "[CONNECTION] Paxos channel between replica:" << std::endl
+            << "    built connection with address: "
+            << state.network_address << std::endl;
         xdr::set_close_on_exec(state.fd.get());
         state.replica_client = new ReplicaClientType(state.fd.get());
         std::thread detect_thread(std::bind(

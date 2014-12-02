@@ -17,10 +17,10 @@
 #include "paxos/replica_client_set.hh"
 
 void paxos_listener_thread_entry(const std::string& port) {
-  std::cout << "HANG: try to connect " << port << std::endl;
+  std::cout << "[CONNECTION] Paxos channel between replica:" << std::endl
+      << "    listening on port# " << port << std::endl;
   xdr::rpc_tcp_listener paxos_listener(
       xdr::tcp_listen(port.c_str(), AF_INET));
-  std::cout << "HANG: after listen " << port << std::endl;
   paxos_v1_server paxos_server;
   try {
     paxos_listener.register_service(paxos_server);
@@ -35,8 +35,15 @@ void paxos_listener_thread_entry(const std::string& port) {
 // auto* client = new xdr::srpc_client<paxos_v1>{fd.release()};
 
 int main(int argc, char* argv[]) {
-  assert(argc == 3);
+  if (argc != 3) {
+    std::cout << "./paxos_replica [config_file_name]"
+        << "[replica_rank_start_from_0]" << std::endl
+        << "config file format:" << std::endl
+        << "quota; replica_address; client_address ..." << std::endl;
+    return 1;
+  }
   ReplicaState replica_state(argv[1], std::stoi(argv[2]));
+
   std::map<int, net_address_t> other_replicas;
   for (int i = 0; i < replica_state.getQuota(); ++i) {
     if (i != replica_state.getSelfRank()) {
@@ -44,15 +51,20 @@ int main(int argc, char* argv[]) {
     }
   }
   ReplicaClientSet replica_client_set(other_replicas);
+
+  // Try to connect to other replicas.
   replica_client_set.tryConnect();
 
+  // Start the listening thread.
   std::string self_replica_address =
       replica_state.getReplicaAddress(replica_state.getSelfRank());
   std::thread paxos_listener_thread(
       std::bind(
           paxos_listener_thread_entry,
           analyzeNetworkPort(self_replica_address)));
+
   while (true) {
+    // Try to connect to other replicas.
     replica_client_set.tryConnect();
     sleep(1);
   }
