@@ -20,6 +20,11 @@ paxos_v1_server::replicate(std::unique_ptr<replicate_arg> arg)
   memcpy(message->raw_data(), arg->arg.request.data(), arg->arg.request.size());
   xdr_from_msg(message, request);
   std::cout << "address:" << request.newview.primary.addr << std::endl;
+  replica_state_->BeginAccess();
+  std::cout << "[LEADER] new leader found." << std::endl;
+  replica_state_->isLeader = false;
+  replica_state_->view = request.newview;
+  replica_state_->EndAccess();
 
   return res;
 }

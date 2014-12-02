@@ -33,10 +33,16 @@ class paxos_v1_server {
 };
 
 class paxos_client_v1_server {
-public:
+ public:
   using rpc_interface_type = paxos_client_v1;
 
+  explicit paxos_client_v1_server(ReplicaState* replica_state) {
+    replica_state_ = replica_state;
+  }
+
   std::unique_ptr<execute_res> execute(std::unique_ptr<execute_arg> arg);
+ private:
+  ReplicaState* replica_state_;
 };
 
 #endif // !__XDR_PAXOS_PAXOS_IMPL_HH_INCLUDED__

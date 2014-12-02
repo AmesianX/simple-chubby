@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
   ReplicaClientSet replica_client_set(other_replicas);
 
   // User interface: paxos_interface_for_user->execute(arg).
-  paxos_client_v1_server paxos_interface_for_user;
+  paxos_client_v1_server paxos_interface_for_user(&replica_state);
 
   // Connects to other paxos replicas.
   replica_client_set.tryConnect();
