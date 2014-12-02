@@ -25,7 +25,8 @@ void
 api_v1_server::printFd()
 {
   cout << "\tfile2fd_map:" << endl;
-  for (auto it = file2fd_map.begin(); it != file2fd_map.end(); it++) {
+  for (auto it = file2fd_map.begin(); 
+       it != file2fd_map.end(); it++) {
     cout << "\t\t file: "<< it->first<<endl;
     for (auto pair : it->second)
       cout<< "\t\t\t client: "<<pair.client
@@ -34,11 +35,21 @@ api_v1_server::printFd()
   }
 
   cout << "\tclient2fd_map:" <<endl;
-  for (auto it = client2fd_map.begin(); it != client2fd_map.end(); it++) {
+  for (auto it = client2fd_map.begin(); 
+       it != client2fd_map.end(); it++) {
     cout << "\t\t client: "<< it->first<<endl;
     for (auto fd : it->second)
       cout << "\t\t\t FD: ("<< fd ->file_name
 	   << ", "<< fd->instance_number<<")"<<endl;
+  }
+
+  cout << "\tlock_queue_map:" <<endl;
+  for (auto it = lock_queue_map.begin();
+       it != lock_queue_map.end(); it++) {
+    cout << "\t\t file: "<< it->first<<endl;
+    for (auto& rpc : it->second)
+      cout << "\t\t\t Session: ("<< rpc.session
+	   << ", "<< rpc.xid <<")"<<endl;
   }
 }
 
@@ -183,9 +194,13 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   ClientFdPair pair {client_id, fd};
   // remove FD from <file, list of (client, FD) pairs> map
   file2fd_map[fd->file_name].remove(pair);
+  if(file2fd_map[fd->file_name].empty())
+    file2fd_map.erase(fd->file_name);
 
   // remove FD from <client, list of FDs> map
   client2fd_map[client_id].remove(fd);
+  if(client2fd_map[client_id].empty())
+    client2fd_map.erase(client_id);
 
   // delete FD
   delete fd;
@@ -205,7 +220,8 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = chubby_server_->getClientId(session_id);
   
-  cout<<"\nserver: fileDelete: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
+  cout<<"\nserver: fileDelete: ("<< arg->file_name
+      << ", "<< arg->instance_number<<")"<<endl;
   
   FileHandler *fd = findFd(client_id, *arg);
   if(fd == nullptr) {
@@ -233,7 +249,7 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
     FileHandler *f = it->fd;
     // remove this FD in client2fd_map
     client2fd_map[c].remove(f);
-    if(client2fd_map[c].size() == 0)
+    if(client2fd_map[c].empty())
       client2fd_map.erase(c);
     // free space
     delete f;
@@ -322,8 +338,33 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = chubby_server_->getClientId(session_id);
   
-  // Fill in function body here
+  cout<<"\nserver: acquire: ("<< arg->file_name << ", "
+      << arg->instance_number<<", "<<client_id<<")"<<endl;
   
+  FileHandler *fd = findFd(client_id, *arg);
+  if(fd == nullptr) {
+    // No match FD found
+    // return an error
+    res->discriminant(1);
+    res->errCode() = BAD_ARG;
+    chubby_server_->reply(session_id, xid, std::move(res));
+    return res;
+  }
+
+  // try to set the lock_owner in the database
+  if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
+    // succeeded in DB, return true
+    assert(lock_queue_map.find(fd->file_name) == lock_queue_map.end());
+    res->discriminant(0);
+    res->val() = true;
+    chubby_server_->reply(session_id, xid, std::move(res));
+    printFd();
+    return res;
+  }
+
+  // otherwise, add session information in lock_queue_map
+  lock_queue_map[fd->file_name].push_back({session_id, xid});
+  printFd();
   return res;
 }
 
@@ -334,8 +375,35 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = chubby_server_->getClientId(session_id);
   
-  // Fill in function body here
-  
+  cout<<"\nserver: tryAcquire: ("<< arg->file_name << ", "
+      << arg->instance_number<<", "<<client_id<<")"<<endl;
+
+  FileHandler *fd = findFd(client_id, *arg);
+  if(fd == nullptr) {
+    // No match FD found
+    // return an error
+    res->discriminant(1);
+    res->errCode() = BAD_ARG;
+    chubby_server_->reply(session_id, xid, std::move(res));
+    return res;
+  }
+
+  // try to set the lock_owner in the database
+  if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
+    // succeeded in DB, return true
+    assert(lock_queue_map.find(fd->file_name) == lock_queue_map.end());
+    res->discriminant(0);
+    res->val() = true;
+    chubby_server_->reply(session_id, xid, std::move(res));
+    printFd();
+    return res;
+  }
+
+  // return false otherwise
+  res->discriminant(0);
+  res->val() = false;
+  chubby_server_->reply(session_id, xid, std::move(res));
+  printFd();
   return res;
 }
 
@@ -345,9 +413,56 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = chubby_server_->getClientId(session_id);
+
+  cout<<"\nserver: release: ("<< arg->file_name << ", "
+      << arg->instance_number<<", "<<client_id<<")"<<endl;
+
+  FileHandler *fd = findFd(client_id, *arg);
+  if(fd == nullptr) {
+    // No match FD found
+    // return an error
+    res->discriminant(1);
+    res->errCode() = BAD_ARG;
+    chubby_server_->reply(session_id, xid, std::move(res));
+    return res;
+  }
+
+  if(!db.resetLockOwner(fd->file_name, fd->instance_number)) {
+    // reset failed
+    res->discriminant(1);
+    res->errCode() = FS_FAIL;
+    chubby_server_->reply(session_id, xid, std::move(res));
+    return res;
+  }
+
+  // reset successed
+  res->discriminant(0);
+  res->val() = true;
+  chubby_server_->reply(session_id, xid, std::move(res));
   
-  // Fill in function body here
-  
+  printFd();
+  cout << "check the lock_queue_map"<<endl;
+  // check the lock_queue_map
+  auto it = lock_queue_map.find(fd->file_name);
+  if(it != lock_queue_map.end()) {
+    std::list<RPCIdPair> &lock_queue = it->second;
+    assert(lock_queue.size() != 0);
+    
+    // pop the first element in the queue
+    RPCIdPair acquire_rpc = lock_queue.front();
+    lock_queue.pop_front();
+    
+    // reply acquire() PRC
+    std::unique_ptr<RetBool> r(new RetBool);
+    r->discriminant(0);
+    r->val() = true;
+    chubby_server_->reply(acquire_rpc.session, acquire_rpc.xid, std::move(r));
+        
+    // garbage collect
+    if(lock_queue.empty())
+      lock_queue_map.erase(it);
+    printFd();
+  }
   return res;
 }
 

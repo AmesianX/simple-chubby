@@ -75,9 +75,9 @@ public:
 			    FileContent *file_content, 
 			    MetaData *meta_data);
     bool setContents(FileHandlerId fdId, const FileContent &file_content);
-    void acquire(const FileHandler &fd);
-    bool tryAcquire(const FileHandler &fd);
-    void release(const FileHandler &fd);
+    void acquire(FileHandlerId fdId);
+    bool tryAcquire(FileHandlerId fdId);
+    void release(FileHandlerId fdId);
 
 private:
   xdr::chubby_client_handler<api_v1> *client;

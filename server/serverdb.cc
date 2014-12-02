@@ -42,7 +42,7 @@ ServerDB::hasName(const string &path)
 bool
 ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number)
 {
-  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<", "<<instance_number;
+  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<", "<<instance_number<<") ";
   string parent_name = getParentName(file_name);
   bool file_exists = hasName(file_name);
   bool parent_exists = parent_name.compare("/") == 0 ||  // root dir ('/') always exists
@@ -69,7 +69,7 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t ins
 bool
 ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 {
-  cout<<"db: checkAndOpen("<<file_name<<", "<<instance_number;
+  cout<<"db: checkAndOpen("<<file_name<<", "<<instance_number<<") ";
   bool file_exists = hasName(file_name);
   if (!file_exists) {
     cout<< " fails."<<endl;
@@ -94,7 +94,7 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 bool 
 ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
 {
-  cout<<"db: checkAndDelete("<<file_name<<", "<<instance_number;
+  cout<<"db: checkAndDelete("<<file_name<<", "<<instance_number<<") ";
   SQLStmt s(db, "SELECT lock_owner, instance_number, is_directory FROM fs WHERE name = \"%s\"",
             file_name.c_str());
 
@@ -106,8 +106,8 @@ ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
   }
 
   // check lock is held
-  uint64_t lock_owner = s.integer(0);
-  if (lock_owner != 0) {
+  std::string lock_owner = s.str(0);
+  if (lock_owner.compare(NO_OWNER) != 0) {
     cout<< " fails. lock is held"<<endl;
     return false;
   }
@@ -201,6 +201,83 @@ ServerDB::checkAndUpdate(const std::string &file_name, uint64_t instance_number,
   return true;
 }
 
+bool
+ServerDB::testAndSetLockOwner(const std::string &file_name, uint64_t instance_number,
+			      const std::string &client_id)
+{
+  cout<<"db: testAndSetLockOwner("<<file_name<<", "<<instance_number
+      <<", "<< client_id<<") ";
+  
+  SQLStmt s(db, "SELECT instance_number, lock_owner, lock_generation_number FROM fs WHERE name = \"%s\"",
+	    file_name.c_str());
+
+  s.step();
+  if (!s.row()) {
+    // node does not exist
+    cout<< " fails. node does not exist"<<endl;
+    return false;
+  }
+
+  // check INSTANCE_NUMBER
+  uint64_t node_instance_number = s.integer(0);
+  if (node_instance_number != instance_number) {
+    cout<< " fails. instance_number doesn't match"<<endl;
+    return false;
+  }
+
+  
+  // check lock is held
+  std::string lock_owner = s.str(1);
+  if (lock_owner.compare(NO_OWNER) != 0) {
+    cout<< " fails. lock is held"<<endl;
+    return false;
+  }
+  
+  uint64_t new_lock_generation_number = s.integer(2) + 1;
+
+  // do update
+  sqlexec("BEGIN;");
+  sqlexec("UPDATE fs SET lock_owner = \"%s\", lock_generation_number = %d WHERE name = \"%s\";",
+	  client_id.c_str(), new_lock_generation_number, file_name.c_str());
+  sqlexec("COMMIT;");
+  cout<< " succeeds."<<endl;
+
+  return true;
+}
+
+bool
+ServerDB::resetLockOwner(const std::string &file_name, uint64_t instance_number)
+{
+  
+  cout<<"db: resetLockOwner("<<file_name<<", "<<instance_number<<") ";
+  
+  SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
+	    file_name.c_str());
+
+  s.step();
+  if (!s.row()) {
+    // node does not exist
+    cout<< " fails. node does not exist"<<endl;
+    return false;
+  }
+
+  // check INSTANCE_NUMBER
+  uint64_t node_instance_number = s.integer(0);
+  if (node_instance_number != instance_number) {
+    cout<< " fails. lock is held"<<endl;
+    return false;
+  }
+    
+  // do update
+  sqlexec("BEGIN;");
+  sqlexec("UPDATE fs SET lock_owner = \"%s\" WHERE name = \"%s\";",
+	  NO_OWNER.c_str(), file_name.c_str());
+  sqlexec("COMMIT;");
+  
+  cout<< " succeeds."<<endl;
+  return true;
+}
+
 void
 ServerDB::create(const char *file)
 {
@@ -217,7 +294,7 @@ ServerDB::create(const char *file)
   string table_params = string("(") + 
     "name TEXT PRIMARY KEY NOT NULL, " +
     "content TEXT, " +
-    "lock_owner INT DEFAULT 0, " +
+    "lock_owner TEXT DEFAULT \"" + NO_OWNER + "\", " +
     "instance_number INT, " +
     "content_generation_number INT DEFAULT 0, " +
     "lock_generation_number INT DEFAULT 0, " +
@@ -390,7 +467,56 @@ main(int argc, const char *argv[])
       " "<< meta.is_directory<<endl;
   }
   else cout << "failed." << endl;
-    
+
+
+  r = s.testAndSetLockOwner("/test", 3, "client_1");
+  cout << "test_set_lock /test ";
+  if(r)
+    cout << "succeeded."<< endl;
+  else cout << "failed." << endl;
+
+  r = s.testAndSetLockOwner("/test", 3, "client_1");
+  cout << "test_set_lock /test ";
+  if(r)
+    cout << "succeeded."<< endl;
+  else cout << "failed." << endl;
+
+  
+  r = s.checkAndRead("/test", 3, &content, &meta);
+  cout << "read /test ";
+  if(r) {
+    cout << "succeeded." << endl;
+    cout << content<< " "<< meta.instance_number << " "<< meta.content_generation_number<<
+      " "<< meta.lock_generation_number << " "<< meta.file_content_checksum << 
+      " "<< meta.is_directory<<endl;
+  }
+  else cout << "failed." << endl;
+
+
+  r = s.resetLockOwner("/test", 3);
+  cout << "resetset_lock /test ";
+  if(r)
+    cout << "succeeded."<< endl;
+  else cout << "failed." << endl;
+
+  r = s.testAndSetLockOwner("/test", 3, "client_1");
+  cout << "test_set_lock /test ";
+  if(r)
+    cout << "succeeded."<< endl;
+  else cout << "failed." << endl;
+
+
+  r = s.checkAndRead("/test", 3, &content, &meta);
+  cout << "read /test ";
+  if(r) {
+    cout << "succeeded." << endl;
+    cout << content<< " "<< meta.instance_number << " "<< meta.content_generation_number<<
+      " "<< meta.lock_generation_number << " "<< meta.file_content_checksum << 
+      " "<< meta.is_directory<<endl;
+  }
+  else cout << "failed." << endl;
+  
+  
 }
 
 

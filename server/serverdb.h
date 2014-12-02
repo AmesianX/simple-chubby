@@ -73,6 +73,26 @@ public:
   bool checkAndUpdate(const std::string &file_name, uint64_t instance_number,
 		      const std::string &content);
 
+  /*
+   * Test the lock_owner field of node FILE_NAME. If there is no lock
+   * owner, then set lock_owner as CLIENT_ID and update lock_generation_number.
+   * Operation fails if the node does not exists or INSTANCE_NUMBER does 
+   * not match.
+   *
+   * Return Value: true if the lock_owner is set to CLIENT_ID, false otherwire.
+   */
+  bool testAndSetLockOwner(const std::string &file_name, uint64_t instance_number,
+			   const std::string &client_id);
+
+  /*
+   * Reset the lock_owner field of node FILE_NAME
+   * Operation fails if the node does not exists or INSTANCE_NUMBER does 
+   * not match.
+   *
+   * Return Value: true if the update succeeds, false otherwire.
+   */
+  bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
+  
 private:
   // Helper functions
   void create(const char *file);
@@ -83,6 +103,8 @@ private:
   bool hasName(const std::string &name);
 
   sqlite3 *db;
+
+  const std::string NO_OWNER = "empty";
 };
 
 #endif /* __SERVERDB_H__ */

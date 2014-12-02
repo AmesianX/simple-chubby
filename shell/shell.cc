@@ -77,6 +77,39 @@ void Cmd_FileDelete(int argc, const char *argv[])
     cout << e.what() << endl;
   }
 }
+
+void Cmd_Acquire(int argc, const char *argv[]) {
+  if (argc != 2) {
+    cout << "Usage: acquire FD_ID" << endl;
+    return;
+  }
+  int fd = strtol(argv[1], 0, 10);
+  client.acquire(fd);
+}
+
+
+void Cmd_TryAcquire(int argc, const char *argv[]) {
+  if (argc != 2) {
+    cout << "Usage: tryAcquire FD_ID" << endl;
+    return;
+  }
+  int fd = strtol(argv[1], 0, 10);
+  if(client.tryAcquire(fd))
+      cout << "Deleted" << endl;
+    else
+      cout << "Failed" << endl;
+}
+
+
+void Cmd_Release(int argc, const char *argv[]) {
+  if (argc != 2) {
+    cout << "Usage: release FD_ID" << endl;
+    return;
+  }
+  int fd = strtol(argv[1], 0, 10);
+  client.release(fd);
+}
+
   
 void
 DispatchCommand(char *buf)
@@ -110,6 +143,12 @@ DispatchCommand(char *buf)
         Cmd_FileClose(argc, (const char **)argv);
     } else if (cmd == "fileDelete") {
         Cmd_FileDelete(argc, (const char **)argv);
+    } else if (cmd == "acquire") {
+        Cmd_Acquire(argc, (const char **)argv);
+    } else if (cmd == "tryAcquire") {
+        Cmd_TryAcquire(argc, (const char **)argv);
+    } else if (cmd == "release") {
+        Cmd_Release(argc, (const char **)argv);
     } else if (cmd == "exit") {
         exit(0);
     } else if (cmd == "#") {

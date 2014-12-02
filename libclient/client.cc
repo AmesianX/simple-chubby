@@ -161,37 +161,61 @@ Client::setContents(FileHandlerId fdId, const FileContent &file_content)
     auto r = client->setContents(args);
     if(r->discriminant() == 0)
       return r->val();
+    else
+      throw ClientException(static_cast<ClientError>(r->errCode()));
   }
   return false;
 }
 
-
 void 
-Client::acquire(const FileHandler &fd)
+Client::acquire(FileHandlerId fdId)
 {
-    FileHandler args;
-    
-    auto r = client->acquire(args);
+  FileHandler args;
 
-    return;
+  auto it = fdList.find(fdId);
+  if(it != fdList.end()) {
+    args = it->second; 
+    auto r = client->acquire(args);
+    if(r->discriminant() == 0){
+      assert (r->val() == true);
+      return;
+    }
+    else
+      throw ClientException(static_cast<ClientError>(r->errCode()));
+  }
 }
 
 bool 
-Client::tryAcquire(const FileHandler &fd)
+Client::tryAcquire(FileHandlerId fdId)
 {
-    FileHandler args;
+  FileHandler args;
     
+  auto it = fdList.find(fdId);
+  if(it != fdList.end()) {
+    args = it->second; 
     auto r = client->tryAcquire(args);
-
-    return r->val();
+    if(r->discriminant() == 0){
+      return r->val();
+    }
+    else
+      throw ClientException(static_cast<ClientError>(r->errCode()));
+  }
 }
 
 void 
-Client::release(const FileHandler &fd)
+Client::release(FileHandlerId fdId)
 {
-    FileHandler args;
-    
-    auto r = client->release(args);
+  FileHandler args;
 
-    return;
+  auto it = fdList.find(fdId);
+  if(it != fdList.end()) {
+    args = it->second;
+    auto r = client->release(args);
+    if(r->discriminant() == 0){
+      assert (r->val() == true);
+      return;
+    }
+    else
+      throw ClientException(static_cast<ClientError>(r->errCode()));
+  }
 }

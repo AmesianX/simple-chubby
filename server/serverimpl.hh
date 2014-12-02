@@ -24,6 +24,11 @@ struct ClientFdPair {
   }
 };
 
+struct RPCIdPair {
+  xdr::SessionId session;
+  uint32_t xid;
+};
+
 namespace xdr {
   class chubby_server;
 }  // namespace xdr
@@ -34,8 +39,7 @@ public:
   using rpc_interface_type = api_v1;
 
   api_v1_server(xdr::chubby_server* server)
-    : chubby_server_(server), db("chubbystore.db"),
-      rand_gen(1234), file2fd_map(), client2fd_map()
+    : chubby_server_(server), db("chubbystore.db"), rand_gen(1234)
   { 
     //TODO come from Paxos
     instance_number = 0; 
@@ -80,6 +84,7 @@ private:
   std::mt19937_64 rand_gen;
   std::unordered_map<std::string, std::list<ClientFdPair> > file2fd_map;
   std::unordered_map<std::string, std::list<FileHandler *> > client2fd_map;
+  std::unordered_map<std::string, std::list<RPCIdPair> > lock_queue_map;
 
   xdr::chubby_server* chubby_server_;
 
