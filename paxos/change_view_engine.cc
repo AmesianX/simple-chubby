@@ -17,7 +17,10 @@ bool ChangeViewEngine::isLeaderDown() {
   if (replica_state_->isLeader) {
     return false;
   }
-  assert(!replica_state_->view.primary.addr.empty());
+  // No leader is elected yet.
+  if (replica_state_->view.primary.addr.empty()) {
+    return true;
+  }
   int leader_rank =
       replica_state_->getClientUseAddressRank(
           replica_state_->view.primary.addr);
@@ -33,22 +36,20 @@ bool ChangeViewEngine::isLeaderDown() {
 
 // Choose a new leader with the minimum rank.
 int ChangeViewEngine::getNewLeaderRank() {
-  int result = -1;
+  int result = replica_state_->getSelfRank();
   for (int i = 0; i < replica_state_->getQuota(); ++i) {
     if (i != replica_state_->getSelfRank()) {
       auto* replica_client = replica_client_set_->getReplicaClient(i);
       if (replica_client) {
-        result = i;
+        if (i < result) {
+          result = i;
+        }
         replica_client_set_->releaseReplicaClient(i);
         break;
       }
     }
   }
-  if (result == -1) {
-    return replica_state_->getSelfRank();
-  } else {
-    return result;
-  }
+  return result;
 }
 
 void ChangeViewEngine::NotifyNewLeader() {
@@ -66,6 +67,7 @@ void ChangeViewEngine::NotifyNewLeader() {
     std::cout << "[LEADER] Becomes leader!" << std::endl;
     // Broadcast itself.
   } else {
+    std::cout << "Tries to notify the new leader: " << rank << std::endl;
     auto* replica_client = replica_client_set_->getReplicaClient(rank);
     assert(replica_client);
     init_view_arg init_view_instruction;
@@ -80,12 +82,14 @@ void ChangeViewEngine::run() {
   while (true) {
     replica_state_->BeginAccess();
     if (replica_state_->mode == ReplicaState::VC_MANAGER) {
+      std::cout << "Try to initiate view change." << std::endl;
       // Begin initiate a view change.
       NotifyNewLeader();
       replica_state_->EndAccess();
       continue;
     }
     if (isLeaderDown()) {
+      std::cout << "Find Leader is down." << std::endl;
       replica_state_->mode = ReplicaState::VC_MANAGER;
       replica_state_->EndAccess();
       // Prepare to initiate a view change after a random time sleep.
