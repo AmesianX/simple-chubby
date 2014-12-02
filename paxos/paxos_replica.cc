@@ -11,6 +11,7 @@
 #include <xdrpp/socket.h>
 
 #include "paxos/helper.hh"
+#include "paxos/change_view_engine.hh"
 #include "paxos/paxos.hh"
 #include "paxos/paxos_impl.hh"
 #include "paxos/replica_state.hh"
@@ -73,6 +74,9 @@ int main(int argc, char* argv[]) {
           paxos_listener_thread_entry,
           &paxos_server,
           analyzeNetworkPort(self_replica_address)));
+  ChangeViewEngine change_view_engine(&replica_state, &replica_client_set);
+  std::thread change_view_engine_thread(
+      std::bind(&ChangeViewEngine::run, &change_view_engine));
 
   //std::thread
   while (true) {
