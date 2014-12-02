@@ -7,14 +7,21 @@
 
 #include "paxos/paxos.hh"
 
+class ReplicaState;
+
 class paxos_v1_server {
-public:
+ public:
+  explicit paxos_v1_server(ReplicaState* replica_state) {
+    replica_state_ = replica_state;
+  }
   using rpc_interface_type = paxos_v1;
 
   std::unique_ptr<replicate_res> replicate(std::unique_ptr<replicate_arg> arg);
   std::unique_ptr<view_change_res> view_change(std::unique_ptr<view_change_arg> arg);
   std::unique_ptr<new_view_res> new_view(std::unique_ptr<new_view_arg> arg);
   std::unique_ptr<init_view_res> init_view(std::unique_ptr<init_view_arg> arg);
+ private:
+  ReplicaState* replica_state_;
 };
 
 class paxos_client_v1_server {

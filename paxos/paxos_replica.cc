@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
   std::string self_replica_address =
       replica_state.getReplicaAddress(replica_state.getSelfRank());
   // paxos_server.
-  paxos_v1_server paxos_server;
+  paxos_v1_server paxos_server(&replica_state);
   // Starts the server side of the inter-replica channels.
   std::thread paxos_listener_thread(
       std::bind(
@@ -74,10 +74,11 @@ int main(int argc, char* argv[]) {
           &paxos_server,
           analyzeNetworkPort(self_replica_address)));
 
+  //std::thread
   while (true) {
     // Connects to other paxos replicas.
-    replica_client_set.tryConnect();
-    sleep(1);
+    // replica_client_set.tryConnect();
+    // sleep(1);
   }
   return 0;
 }

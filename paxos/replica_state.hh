@@ -16,12 +16,12 @@ struct vc_state {
     VC_UNDERLING,
   };
 
-  _mode_t mode{};
+  _mode_t mode{};  // Maintained.
   view_t view{};
 };
 struct view_t {
   viewid_t vid{};
-  cohort_t primary{};
+  cohort_t primary{};  // Maintained.
   xdr::xvector<cohort_t> backups{};
 };
 struct viewid_t {
@@ -51,6 +51,7 @@ struct ReplicaState : public vc_state {
   // "view.primary" : cohort_t.
   // "view.view_id" : viewid_t.
   // The following access is thread-safe.
+  bool isLeader;
   net_address_t getReplicaAddress(int rank_id) const {
     return replica_address_[rank_id];
   }
