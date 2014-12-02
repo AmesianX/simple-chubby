@@ -17,9 +17,9 @@ public:
   std::unique_ptr<init_view_res> init_view(std::unique_ptr<init_view_arg> arg);
 };
 
-class paxo_client_v1_server {
+class paxos_client_v1_server {
 public:
-  using rpc_interface_type = paxo_client_v1;
+  using rpc_interface_type = paxos_client_v1;
 
   std::unique_ptr<execute_res> execute(std::unique_ptr<execute_arg> arg);
 };

@@ -16,19 +16,22 @@
 #include "paxos/replica_state.hh"
 #include "paxos/replica_client_set.hh"
 
-void paxos_listener_thread_entry(const std::string& port) {
+void paxos_listener_thread_entry(
+    paxos_v1_server* paxos_server, const std::string& port) {
   std::cout << "[CONNECTION] Paxos channel between replica:" << std::endl
       << "    listening on port# " << port << std::endl;
+
   xdr::rpc_tcp_listener paxos_listener(
-      xdr::tcp_listen(port.c_str(), AF_INET));
-  paxos_v1_server paxos_server;
+      xdr::tcp_listen(
+          port.c_str(), AF_INET));
   try {
-    paxos_listener.register_service(paxos_server);
+    paxos_listener.register_service(*paxos_server);
     paxos_listener.run();
   } catch (std::exception& e) {
     std::cerr << e.what() << std::endl;
   }
   std::cerr << "ERROR: listener thread exits!" << std::endl;
+  exit(1);
 }
 
 // auto fd = xdr::tcp_connect(host_port.c_str(), listening_port.c_str());
@@ -42,6 +45,7 @@ int main(int argc, char* argv[]) {
         << "quota; replica_address; client_address ..." << std::endl;
     return 1;
   }
+  // Config replica state.
   ReplicaState replica_state(argv[1], std::stoi(argv[2]));
 
   std::map<int, net_address_t> other_replicas;
@@ -50,21 +54,28 @@ int main(int argc, char* argv[]) {
       other_replicas[i] = replica_state.getReplicaAddress(i);
     }
   }
+  // Config the client side of inter-replica channels.
   ReplicaClientSet replica_client_set(other_replicas);
 
-  // Try to connect to other replicas.
+  // User interface: paxos_interface_for_user->execute(arg).
+  paxos_client_v1_server paxos_interface_for_user;
+
+  // Connects to other paxos replicas.
   replica_client_set.tryConnect();
 
-  // Start the listening thread.
   std::string self_replica_address =
       replica_state.getReplicaAddress(replica_state.getSelfRank());
+  // paxos_server.
+  paxos_v1_server paxos_server;
+  // Starts the server side of the inter-replica channels.
   std::thread paxos_listener_thread(
       std::bind(
           paxos_listener_thread_entry,
+          &paxos_server,
           analyzeNetworkPort(self_replica_address)));
 
   while (true) {
-    // Try to connect to other replicas.
+    // Connects to other paxos replicas.
     replica_client_set.tryConnect();
     sleep(1);
   }

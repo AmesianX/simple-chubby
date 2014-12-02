@@ -901,14 +901,14 @@ struct paxos_v1 {
   };
 };
 
-struct paxo_client_v1 {
+struct paxos_client_v1 {
   static constexpr std::uint32_t program = 805531765;
   static constexpr const char *program_name = "paxos_interface";
   static constexpr std::uint32_t version = 2;
-  static constexpr const char *version_name = "paxo_client_v1";
+  static constexpr const char *version_name = "paxos_client_v1";
 
   struct execute_t {
-    using interface_type = paxo_client_v1;
+    using interface_type = paxos_client_v1;
     static constexpr std::uint32_t proc = 1;
     static constexpr const char *proc_name = "execute";
     using arg_type = execute_arg;

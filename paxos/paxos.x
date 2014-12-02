@@ -149,7 +149,7 @@ program paxos_interface {
     init_view_res init_view(init_view_arg) = 103;
     /* a special replicate followed. */
   } = 1;
-  version paxo_client_v1 {
+  version paxos_client_v1 {
     execute_res execute(execute_arg) = 1;
   } = 2;
 } = 0x30037075;

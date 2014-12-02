@@ -44,7 +44,7 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
 }
 
 std::unique_ptr<execute_res>
-paxo_client_v1_server::execute(std::unique_ptr<execute_arg> arg)
+paxos_client_v1_server::execute(std::unique_ptr<execute_arg> arg)
 {
   std::unique_ptr<execute_res> res(new execute_res);
   
