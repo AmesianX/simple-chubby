@@ -5,16 +5,20 @@
 
 void ExecuteReplicateEngine::replicateCommand(
     const init_view_request& request) {
+  std::cout << "Begin replicate!" << std::endl;
   replicate_arg command;
   xdr::msg_ptr message = xdr::xdr_to_msg(request);
-  // xdr::opaque_vec<>
-  command.arg.request.append((const unsigned char*)message->data(), message->size());
+  command.arg.request.append(
+      (const unsigned char*)message->raw_data(), message->raw_size());
+  std::cout << "Finish serialization!" << std::endl;
+  std::cout << std::string((const char*)message->raw_data(), message->raw_size())  << std::endl;
   for (int i = 0; i < replica_state_->getQuota(); ++i) {
     if (i != replica_state_->getSelfRank()) {
       auto* replica_client = replica_client_set_->getReplicaClient(i);
       if (replica_client) {
         // Result is ignored.
         replica_client->replicate(command);
+        replica_client_set_->releaseReplicaClient(i);
       }
     }
   }

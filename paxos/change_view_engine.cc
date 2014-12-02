@@ -69,7 +69,7 @@ bool ChangeViewEngine::NotifyNewLeader() {
         replica_state_->getClientUseAddress(rank);
     replica_state_->mode = ReplicaState::VC_ACTIVE;
     std::cout << "[LEADER] Becomes leader!" << std::endl;
-    return false;
+    return true;
   } else {
     std::cout << "Tries to notify the new leader: " << rank << std::endl;
     auto* replica_client = replica_client_set_->getReplicaClient(rank);
@@ -79,7 +79,7 @@ bool ChangeViewEngine::NotifyNewLeader() {
     replica_client->init_view(init_view_instruction);
     replica_client_set_->releaseReplicaClient(rank);
     replica_state_->mode = ReplicaState::VC_ACTIVE;
-    return true;
+    return false;
   }
 }
 
@@ -93,9 +93,11 @@ void ChangeViewEngine::run() {
       init_view_request command;
       command.newview = replica_state_->view;
       replica_state_->EndAccess();
+      std::cout << "Before replication." << std::endl;
       if (becomeLeader) {
         execute_replicate_engine_->replicateCommand(command);
       }
+      std::cout << "After replication." << std::endl;
       continue;
     }
     if (isLeaderDown()) {

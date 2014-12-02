@@ -20,7 +20,7 @@ class ChangeViewEngine {
   bool isLeaderDown();
   // Choose a new leader with the minimum rank.
   int getNewLeaderRank();
-  // Returns true if notified another replica, returns false if become leader
+  // Returns false if notified another replica, returns true if become leader
   // itself.
   bool NotifyNewLeader();
   void run();

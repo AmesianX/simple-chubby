@@ -12,7 +12,7 @@ class ExecuteReplicateEngine {
   ExecuteReplicateEngine(ReplicaState* replica_state,
                          ReplicaClientSet* replica_client_set) {
     replica_state_ = replica_state;
-    replica_client_set_ = replica_client_set_;
+    replica_client_set_ = replica_client_set;
   }
   void replicateCommand(const init_view_request& request);
  private:
