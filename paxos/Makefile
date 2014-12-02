@@ -1,4 +1,10 @@
-PAXOS_SRC := paxos/paxos_replica.cc paxos/paxos_impl.cc paxos/replica_client_set.cc paxos/replica_state.cc paxos/helper.cc
+PAXOS_SRC := paxos/paxos_replica.cc \
+	     paxos/paxos_impl.cc \
+	     paxos/replica_client_set.cc \
+	     paxos/replica_state.cc \
+	     paxos/helper.cc \
+	     paxos/change_view_engine.cc
+
 
 PAXOS_OBJ := $(PAXOS_SRC:.cc=.o)
 

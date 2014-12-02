@@ -2,6 +2,7 @@
 #define __PAXOS_REPLICA_STATE_HH_INCLUDED__ 1
 
 #include <pthread.h>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -49,6 +50,7 @@ struct ReplicaState : public vc_state {
   // "mode" : _mode_t_.
   // "view.primary" : cohort_t.
   // "view.view_id" : viewid_t.
+  // The following access is thread-safe.
   net_address_t getReplicaAddress(int rank_id) const {
     return replica_address_[rank_id];
   }
@@ -60,6 +62,26 @@ struct ReplicaState : public vc_state {
   }
   int getQuota() const {
     return quota_;
+  }
+  int getReplicaAddressRank(const net_address_t& net_address) const {
+    auto iter = std::find(replica_address_.begin(),
+                          replica_address_.end(),
+                          net_address);
+    if (iter == replica_address_.end()) {
+      return -1;
+    } else {
+      return std::distance(replica_address_.begin(), iter);
+    }
+  }
+  int getClientUseAddressRank(const net_address_t& net_address) const {
+    auto iter = std::find(client_use_address_.begin(),
+                          client_use_address_.end(),
+                          net_address);
+    if (iter == client_use_address_.end()) {
+      return -1;
+    } else {
+      return std::distance(client_use_address_.begin(), iter);
+    }
   }
 
  private:

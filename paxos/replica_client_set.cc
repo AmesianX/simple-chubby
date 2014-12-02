@@ -73,6 +73,7 @@ ReplicaClientSet::ReplicaClientType* ReplicaClientSet::getReplicaClient(
     pthread_mutex_unlock(&start_connecting_lock_);
     return state.replica_client;
   } else {
+    pthread_mutex_unlock(&state.lock);
     pthread_mutex_unlock(&start_connecting_lock_);
     return nullptr;
   }
