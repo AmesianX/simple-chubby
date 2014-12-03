@@ -15,14 +15,15 @@
 #include <list>
 #include <string>
 
-struct ClientFdPair {
-  std::string client;
+struct SessionFdPair {
+  xdr::SessionId session;
   FileHandler *fd;
-
-  bool operator==(const ClientFdPair &rhs) const {
-    return client == rhs.client && fd == rhs.fd;
+  
+  bool operator==(const SessionFdPair &rhs) const {
+    return session == rhs.session && fd == rhs.fd;
   }
 };
+  
 
 struct RPCIdPair {
   xdr::SessionId session;
@@ -75,20 +76,24 @@ public:
 
   
 private:
-  FileHandler *findFd(std::string client_id, const FileHandler &fd);
-  bool checkName(const std::string &file_name);
+  FileHandler *findFd(xdr::SessionId client_id, const FileHandler &fd);
+  void printFd();
+  void sendLockChangeEvent(const std::string &file_name);
+  void sendContentChangeEvent(const std::string &file_name);
 
   ServerDB db;
   uint64_t instance_number;
   uint64_t master_sequence_number;
   std::mt19937_64 rand_gen;
-  std::unordered_map<std::string, std::list<ClientFdPair> > file2fd_map;
-  std::unordered_map<std::string, std::list<FileHandler *> > client2fd_map;
+  std::unordered_map<std::string, std::list<SessionFdPair> > file2fd_map;
+  std::unordered_map<xdr::SessionId, std::list<FileHandler *> > session2fd_map;
+  
   std::unordered_map<std::string, std::list<RPCIdPair> > lock_queue_map;
+  
+  std::unordered_map<std::string, std::list<xdr::SessionId> > file2lockChange_map;
+  std::unordered_map<std::string, std::list<xdr::SessionId> > file2contentChange_map;
 
   xdr::chubby_server* chubby_server_;
-
-  void printFd();
 };
 
 #endif // !__XDR_SERVER_SERVERIMPL_HH_INCLUDED__

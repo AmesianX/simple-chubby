@@ -92,7 +92,9 @@ public:
    * Return Value: true if the update succeeds, false otherwire.
    */
   bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
+
   
+  std::string getParentName(const std::string &key);
 private:
   // Helper functions
   void create(const char *file);

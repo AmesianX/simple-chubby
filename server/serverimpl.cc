@@ -13,6 +13,9 @@ const uint64_t WRITE = 0x2;
 const uint64_t CREATE_DIRECTORY = 0x4;
 const uint64_t CREATE_FILE = 0x8;
 
+const uint64_t EV_LOCK_CHANGED = 0x100;
+const uint64_t EV_CONTENT_MODIFIED = 0x200;
+
 enum ClientError {
   BAD_ARG,
   FS_FAIL
@@ -20,6 +23,8 @@ enum ClientError {
 
 using std::cout;
 using std::endl;
+
+bool checkName(const std::string &key);
 
 void
 api_v1_server::printFd()
@@ -29,15 +34,15 @@ api_v1_server::printFd()
        it != file2fd_map.end(); it++) {
     cout << "\t\t file: "<< it->first<<endl;
     for (auto pair : it->second)
-      cout<< "\t\t\t client: "<<pair.client
+      cout<< "\t\t\t client: "<<chubby_server_->getClientId(pair.session)
 	  << ", FD: ("<< (pair.fd)->file_name
 	  << ", "<< (pair.fd)->instance_number<<")"<<endl;
   }
 
-  cout << "\tclient2fd_map:" <<endl;
-  for (auto it = client2fd_map.begin(); 
-       it != client2fd_map.end(); it++) {
-    cout << "\t\t client: "<< it->first<<endl;
+  cout << "\tsession2fd_map:" <<endl;
+  for (auto it = session2fd_map.begin(); 
+       it != session2fd_map.end(); it++) {
+    cout << "\t\t client: "<< chubby_server_->getClientId(it->first) <<endl;
     for (auto fd : it->second)
       cout << "\t\t\t FD: ("<< fd ->file_name
 	   << ", "<< fd->instance_number<<")"<<endl;
@@ -92,7 +97,6 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   std::unique_ptr<RetFd> res(new RetFd);
   std::string file_name = arg->name;
   Mode mode = arg->mode;
-  std::string client_id = chubby_server_->getClientId(session_id);
 
   cout<<"\nserver: fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
 
@@ -111,16 +115,6 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
-
-  /* 
-  // check if client has already opened this file
-  auto l = client2fd_map[client_id];
-  for (auto it = l.begin(); it != l.end(); ++it)
-    if ((*it)->file_name.compare(file_name) == 0) {
-      // FD with the same file_name exists
-      // TODO return error
-    }
-  */
   
   FileHandler *fd = new FileHandler();
   // Create file or dir
@@ -153,22 +147,27 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   fd->file_name = file_name;
   fd->write_is_allowed = mode & WRITE;
 
-  // add FD to <file, list of (client, FD) pairs> map
-  //std::map<std::string, std::list<ClientFdPair> > file2fd_map;
-  ClientFdPair pair;
-  pair.client = client_id;
-  pair.fd = fd;
-  file2fd_map[file_name].push_back(pair);
+  // add FD to <file, list of (session, FD) pairs> 
+  file2fd_map[file_name].push_back({session_id, fd});
+  // add FD to <session, list of FDs> map
+  session2fd_map[session_id].push_back(fd);
 
-  // add FD to <client, list of FDs> map
-  // std::map<uint64_t, std::list<FileHandler* > > client2fd_map;
-  client2fd_map[client_id].push_back(fd);
-
+  // register events
+  if (mode & EV_LOCK_CHANGED)
+    file2lockChange_map[file_name].push_back(session_id);
+  if (mode & EV_CONTENT_MODIFIED)
+    file2contentChange_map[file_name].push_back(session_id);
+  
   // return normally with FD
   res->discriminant(0);
   res->val() = *fd;
   printFd();
   chubby_server_->reply(session_id, xid, std::move(res));
+  
+  // send content change events for parent node
+  std::string parent_name = db.getParentName(fd->file_name);
+  if (parent_name.compare("/") != 0 )
+    sendContentChangeEvent(parent_name);
   return res;
 }
 
@@ -177,11 +176,10 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
 			 xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  std::string client_id = chubby_server_->getClientId(session_id);
   
   cout<<"\nserver: fileClose: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
 
-  FileHandler *fd = findFd(client_id, *arg);
+  FileHandler *fd = findFd(session_id, *arg);
   if(fd == nullptr) {
     // No match FD found
     // return normally with TRUE value
@@ -191,16 +189,27 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
     return res;
   }
 
-  ClientFdPair pair {client_id, fd};
-  // remove FD from <file, list of (client, FD) pairs> map
-  file2fd_map[fd->file_name].remove(pair);
+  // remove FD from <file, list of (session, FD) pairs> map
+  file2fd_map[fd->file_name].remove({session_id, fd});
   if(file2fd_map[fd->file_name].empty())
     file2fd_map.erase(fd->file_name);
 
-  // remove FD from <client, list of FDs> map
-  client2fd_map[client_id].remove(fd);
-  if(client2fd_map[client_id].empty())
-    client2fd_map.erase(client_id);
+  // remove FD from <session, list of FDs> map
+  session2fd_map[session_id].remove(fd);
+  if(session2fd_map[session_id].empty())
+    session2fd_map.erase(session_id);
+
+  // clear event maps
+  if(file2lockChange_map.count(fd->file_name) > 0) {
+    file2lockChange_map[fd->file_name].remove(session_id);
+    if(file2lockChange_map[fd->file_name].empty())
+      file2lockChange_map.erase(fd->file_name);
+  }
+  if(file2contentChange_map.count(fd->file_name) > 0) {
+    file2contentChange_map[fd->file_name].remove(session_id);
+    if(file2contentChange_map[fd->file_name].empty())
+      file2contentChange_map.erase(fd->file_name);
+  }
 
   // delete FD
   delete fd;
@@ -218,12 +227,11 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
                           xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  std::string client_id = chubby_server_->getClientId(session_id);
   
   cout<<"\nserver: fileDelete: ("<< arg->file_name
       << ", "<< arg->instance_number<<")"<<endl;
   
-  FileHandler *fd = findFd(client_id, *arg);
+  FileHandler *fd = findFd(session_id, *arg);
   if(fd == nullptr) {
     // No match FD found
     // return an error
@@ -241,19 +249,20 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
-  
+
   // remove all FDs in file2fd_map[fd->file_name]
-  std::list<ClientFdPair> l = file2fd_map[arg->file_name];
+  std::list<SessionFdPair> l = file2fd_map[arg->file_name];
   for (auto it = l.begin(); it != l.end(); ++it) {
-    std::string c = it->client;
+    auto s = it->session;
     FileHandler *f = it->fd;
-    // remove this FD in client2fd_map
-    client2fd_map[c].remove(f);
-    if(client2fd_map[c].empty())
-      client2fd_map.erase(c);
+    // remove this FD in session2fd_map
+    session2fd_map[s].remove(f);
+    if(session2fd_map[s].empty())
+      session2fd_map.erase(s);
     // free space
     delete f;
   }  
+ 
   // remove the list in file2fd_map
   int r = file2fd_map.erase(arg->file_name);
   assert(r == 1);
@@ -263,6 +272,17 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   res->val() = true;
   printFd();
   chubby_server_->reply(session_id, xid, std::move(res));
+  
+  // send content change events for current node (event list deleted inside)
+  sendContentChangeEvent(arg->file_name);
+  // send content change events for parent node
+  std::string parent_name = db.getParentName(arg->file_name);
+  if (parent_name.compare("/") != 0 )
+    sendContentChangeEvent(parent_name);
+
+  // clear lock event maps
+  file2lockChange_map.erase(arg->file_name);
+  
   return res;
 }
 
@@ -271,9 +291,8 @@ api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg,
                                   xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetContentsAndStat> res(new RetContentsAndStat);
-  std::string client_id = chubby_server_->getClientId(session_id);
   
-  FileHandler *fd = findFd(client_id, *arg);
+  FileHandler *fd = findFd(session_id, *arg);
   if(fd == nullptr) {
     // No match FD found
     res->discriminant(1);
@@ -298,6 +317,7 @@ api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg,
   res->val().content = content;
   res->val().stat = meta;
   chubby_server_->reply(session_id, xid, std::move(res));
+
   return res;
 }
 
@@ -306,9 +326,8 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
                            xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  std::string client_id = chubby_server_->getClientId(session_id);
   
-  FileHandler *fd = findFd(client_id, arg->fd);
+  FileHandler *fd = findFd(session_id, arg->fd);
   if(fd == nullptr) {
     // No match FD found
     res->discriminant(1);
@@ -330,6 +349,10 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
   res->discriminant(0);
   res->val() = true;
   chubby_server_->reply(session_id, xid, std::move(res));
+  
+  // send content change events for current node
+  sendContentChangeEvent(fd->file_name);
+  
   return res;
 }
 
@@ -343,7 +366,7 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
   cout<<"\nserver: acquire: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<client_id<<")"<<endl;
   
-  FileHandler *fd = findFd(client_id, *arg);
+  FileHandler *fd = findFd(session_id, *arg);
   if(fd == nullptr) {
     // No match FD found
     // return an error
@@ -361,6 +384,9 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
     res->val() = true;
     chubby_server_->reply(session_id, xid, std::move(res));
     printFd();
+
+    // send lock change events for current node
+    sendLockChangeEvent(fd->file_name);
     return res;
   }
 
@@ -380,7 +406,7 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
   cout<<"\nserver: tryAcquire: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<client_id<<")"<<endl;
 
-  FileHandler *fd = findFd(client_id, *arg);
+  FileHandler *fd = findFd(session_id, *arg);
   if(fd == nullptr) {
     // No match FD found
     // return an error
@@ -398,6 +424,9 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
     res->val() = true;
     chubby_server_->reply(session_id, xid, std::move(res));
     printFd();
+
+    // send lock change events for current node
+    sendLockChangeEvent(fd->file_name);
     return res;
   }
 
@@ -419,7 +448,7 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
   cout<<"\nserver: release: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<client_id<<")"<<endl;
 
-  FileHandler *fd = findFd(client_id, *arg);
+  FileHandler *fd = findFd(session_id, *arg);
   if(fd == nullptr) {
     // No match FD found
     // return an error
@@ -442,8 +471,6 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
   res->val() = true;
   chubby_server_->reply(session_id, xid, std::move(res));
   
-  printFd();
-  cout << "check the lock_queue_map"<<endl;
   // check the lock_queue_map
   auto it = lock_queue_map.find(fd->file_name);
   if(it != lock_queue_map.end()) {
@@ -465,6 +492,9 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
       lock_queue_map.erase(it);
     printFd();
   }
+
+  // send lock change events for current node
+  sendLockChangeEvent(fd->file_name);
   return res;
 }
 
@@ -481,7 +511,7 @@ checkChar(char c)
    underscores, and single slashes to separate components. 
    Cannot be "/". Cannot end with '/'.*/
 bool 
-api_v1_server::checkName(const std::string &key)
+checkName(const std::string &key)
 {
   // key must begin with '/'
   if (key[0] != '/') return false;
@@ -500,9 +530,9 @@ api_v1_server::checkName(const std::string &key)
 
 
 FileHandler *
-api_v1_server::findFd(std::string client_id, const FileHandler &fd)
+api_v1_server::findFd(xdr::SessionId session_id, const FileHandler &fd)
 {
-  std::list<FileHandler *> l = client2fd_map[client_id];
+  std::list<FileHandler *> l = session2fd_map[session_id];
     
   for(auto it = l.begin(); it != l.end(); ++it) {
     FileHandler *p = *it;
@@ -520,4 +550,32 @@ api_v1_server::findFd(std::string client_id, const FileHandler &fd)
   }
   // return nullptr if no match found
   return nullptr;
+}
+
+void
+api_v1_server::sendLockChangeEvent(const std::string &file_name)
+{
+  if (file2lockChange_map.count(file_name) > 0) {
+    EventContent evc;
+    evc.event = ChubbyEvent::LOCK_CHANGED;
+    evc.fname = file_name;
+    for (auto s : file2lockChange_map[file_name])
+      chubby_server_->send<event_interface::event_callback_t> (s, evc);
+    // delete the list
+    file2lockChange_map.erase(file_name);
+  }
+}
+
+void
+api_v1_server::sendContentChangeEvent(const std::string &file_name)
+{
+  if (file2contentChange_map.count(file_name) > 0) {
+    EventContent evc;
+    evc.event = ChubbyEvent::CONTENT_MODIFIED;
+    evc.fname = file_name;
+    for (auto s : file2contentChange_map[file_name])
+      chubby_server_->send<event_interface::event_callback_t> (s, evc);
+    // delete the list
+    file2contentChange_map.erase(file_name);
+  }
 }

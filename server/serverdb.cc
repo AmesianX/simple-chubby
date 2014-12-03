@@ -30,7 +30,7 @@ ServerDB::~ServerDB()
 
 
 string
-getParentName(const string &key)
+ServerDB::getParentName(const string &key)
 {
   // find the lenth of the parent of KEY
   int pos = key.length() - 1;
@@ -137,7 +137,7 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
   SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
 	    file_name.c_str());
   s.step();
-  if(s.step().row()) {
+  if(!s.row()) {
     cout << " fails (node exits)."<<endl;
     return false;
   }
