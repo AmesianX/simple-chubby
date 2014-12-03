@@ -1,5 +1,7 @@
 #include <thread>
 #include <iostream>
+#include "paxos/helper.hh"
+#include "paxos/back_store.hh"
 #include "paxos/paxos_lib.hh"
 
 int main(int argc, char* argv[]) {
@@ -12,13 +14,30 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  PaxosLib paxos_lib(argv[1], std::stoi(argv[2]));
+  BackStore back_store;
+  PaxosLib paxos_lib(argv[1], std::stoi(argv[2]), &back_store);
   std::thread run_thread(std::bind(&PaxosLib::Run, &paxos_lib));
 
   std::string line;
   while (true) {
     std::getline(std::cin, line);
-    paxos_lib.execute_replicate_engine->replicateCommand(line);
+    /*
+    struct execute_arg {
+      cid_t cid;
+      uid_t rid;
+      viewid_t vid;
+      opaque request<>;
+    };
+    */
+    std::unique_ptr<execute_arg> arg(new execute_arg);
+    arg->request.append((const unsigned char*)line.c_str(), line.size());
+    std::unique_ptr<execute_res> result =
+        paxos_lib.paxos_interface_for_user->execute(std::move(arg));
+    if (result->ok()) {
+      std::cout << "Reply: " << OpaqueToString(result->reply()) << std::endl;
+    } else {
+      std::cout << "Not the leader." << std::endl;
+    }
   }
 
   run_thread.join();

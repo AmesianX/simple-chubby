@@ -8,7 +8,7 @@ PAXOS_SRC := paxos/paxos_replica.cc \
              paxos/paxos_lib.cc
 
 
-PAXOS_HEADER := $(PAXOS_SRC:.cc=.hh)
+PAXOS_HEADER := $(PAXOS_SRC:.cc=.hh) paxos/back_store.hh
 
 PAXOS_OBJ := $(PAXOS_SRC:.cc=.o)
 

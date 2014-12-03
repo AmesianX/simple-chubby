@@ -14,3 +14,14 @@ std::string analyzeNetworkPort(
   assert(colon_pos != std::string::npos);
   return network_address.substr(colon_pos + 1);
 }
+
+std::string OpaqueToString(const xdr::opaque_vec<>& input) {
+  return std::string((const char*)input.data(), input.size());
+}
+void OpaqueToString(const xdr::opaque_vec<>& input, std::string* output) {
+  output->assign((const char*)input.data(), input.size());
+}
+void StringToOpaque(const std::string& input, xdr::opaque_vec<>* output) {
+  output->clear();
+  output->append((const unsigned char*)input.c_str(), input.size());
+}

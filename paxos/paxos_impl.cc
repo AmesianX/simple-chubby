@@ -3,6 +3,7 @@
 
 #include "paxos/replica_client_set.hh"
 #include "paxos/replica_state.hh"
+#include "paxos/helper.hh"
 #include "paxos/execute_replicate_engine.hh"
 
 #include "paxos/paxos_impl.hh"
@@ -11,19 +12,23 @@ std::unique_ptr<replicate_res>
 paxos_v1_server::replicate(std::unique_ptr<replicate_arg> arg)
 {
   std::unique_ptr<replicate_res> res(new replicate_res);
+  if (arg->vs.ts == 0) {
+    // new view.
+    init_view_request request;
+    xdr::msg_ptr message(xdr::message_t::alloc(arg->arg.request.size() - 4));
+    memcpy(message->raw_data(), arg->arg.request.data(), arg->arg.request.size());
+    xdr_from_msg(message, request);
+    replica_state_->BeginAccess();
+    printf("New leader promoted: rank#%d\n",
+           replica_state_->getClientUseAddressRank(request.newview.primary.addr));
+    replica_state_->isLeader = false;
+    replica_state_->view = request.newview;
+    replica_state_->EndAccess();
 
-  init_view_request request;
-  xdr::msg_ptr message(xdr::message_t::alloc(arg->arg.request.size() - 4));
-  memcpy(message->raw_data(), arg->arg.request.data(), arg->arg.request.size());
-  xdr_from_msg(message, request);
-  replica_state_->BeginAccess();
-  printf("New leader promoted: rank#%d\n",
-         replica_state_->getClientUseAddressRank(request.newview.primary.addr));
-  replica_state_->isLeader = false;
-  replica_state_->view = request.newview;
-  replica_state_->EndAccess();
-
-  return res;
+    return res;
+  } else {
+    execute_replicate_engine_->BackUp(OpaqueToString(arg->arg.request));
+  }
 }
 
 std::unique_ptr<view_change_res>
@@ -78,6 +83,16 @@ std::unique_ptr<execute_res>
 paxos_client_v1_server::execute(std::unique_ptr<execute_arg> arg)
 {
   std::unique_ptr<execute_res> res(new execute_res);
-  // Fill in.
+  replica_state_->BeginAccess();
+  bool is_leader = replica_state_->isLeader;
+  replica_state_->EndAccess();
+  if (!is_leader) {
+    res->ok(false);
+    return res;
+  }
+  std::string result = execute_replicate_engine_->replicateCommand(
+      OpaqueToString(arg->request));
+  res->ok(true);
+  StringToOpaque(result, &res->reply());
   return res;
 }

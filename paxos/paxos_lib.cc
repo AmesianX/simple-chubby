@@ -36,7 +36,9 @@ void paxos_listener_thread_entry(
 }
 }
 
-PaxosLib::PaxosLib(const std::string& config_file_name, int rank_id) {
+PaxosLib::PaxosLib(const std::string& config_file_name, int rank_id,
+                   BackStoreInterface* back_store_input) {
+  back_store = back_store_input;
   // Config Paxos replica state.
   replica_state = new ReplicaState(config_file_name, rank_id);
 
@@ -46,7 +48,7 @@ PaxosLib::PaxosLib(const std::string& config_file_name, int rank_id) {
 
   // Config Execute engine.
   execute_replicate_engine = new ExecuteReplicateEngine(
-      replica_state, replica_client_set);
+      replica_state, replica_client_set, back_store);
 
   // Config view-change engine.
   change_view_engine = new ChangeViewEngine(
@@ -58,7 +60,8 @@ PaxosLib::PaxosLib(const std::string& config_file_name, int rank_id) {
       replica_state, replica_client_set, execute_replicate_engine);
 
   // Config Paxos user interface: paxos_interface_for_user->execute(arg).
-  paxos_interface_for_user = new paxos_client_v1_server(replica_state);
+  paxos_interface_for_user = new paxos_client_v1_server(
+      replica_state, execute_replicate_engine);
 }
 
 PaxosLib::~PaxosLib() {
@@ -73,6 +76,7 @@ PaxosLib::~PaxosLib() {
 }
 
 void PaxosLib::RunServer() {
+  assert(back_store);
   // Starts the server side of Paxos the inter-replica channels.
   std::string self_replica_address =
       replica_state->getReplicaAddress(replica_state->getSelfRank());

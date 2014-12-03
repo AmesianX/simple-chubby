@@ -13,4 +13,10 @@ std::pair<std::string, std::string> analyzeNetworkAddress(
 std::string analyzeNetworkPort(
     const net_address_t& network_address);
 
+std::string OpaqueToString(const xdr::opaque_vec<>& input);
+
+void OpaqueToString(const xdr::opaque_vec<>& input, std::string* output);
+
+void StringToOpaque(const std::string& input, xdr::opaque_vec<>* output);
+
 #endif  // __PAXOS_HELPER_HH_INCLUDED__

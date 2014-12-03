@@ -3,10 +3,9 @@
 #endif  // __PAXOS_PAXOS_LIB_HH_INCLUDED__ 1
 
 #include "paxos.hh"
-#include "paxos/execute_replicate_engine.hh"
+#include "paxos/back_store.hh"
+#include "paxos/paxos_impl.hh"
 
-class BackStoreInterface {
-};
 
 namespace xdr {
 class rpc_tcp_listener;
@@ -20,14 +19,11 @@ class ChangeViewEngine;
 
 class PaxosLib {
  public:
-  PaxosLib(const std::string& config_file_name, int rank_id);
-  void RegisterBackStore(BackStoreInterface* back_store_input) {
-    back_store = back_store_input;
-  }
+  PaxosLib(const std::string& config_file_name, int rank_id,
+           BackStoreInterface* back_store_input);
   void Run();
   ~PaxosLib();
   paxos_client_v1_server* paxos_interface_for_user{};
-  ExecuteReplicateEngine* execute_replicate_engine{};
  private:
   void RunServer();
   BackStoreInterface* back_store{};
@@ -36,4 +32,5 @@ class PaxosLib {
   xdr::rpc_tcp_listener* paxos_listener{};
   paxos_v1_server* paxos_server{};
   ChangeViewEngine* change_view_engine{};
+  ExecuteReplicateEngine* execute_replicate_engine{};
 };
