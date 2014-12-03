@@ -12,6 +12,8 @@
 #include "xdrpp/srpc.h"
 #include "paxos/paxos.hh"
 
+class ReplicaState;
+
 class ReplicaClientSet {
  public:
   typedef xdr::srpc_client<paxos_v1> ReplicaClientType;
@@ -41,7 +43,8 @@ class ReplicaClientSet {
   void detectFailure(ReplicaClientState* replica_client);
 
  public:
-  ReplicaClientSet(const std::map<int, net_address_t>& other_replicas);
+  ReplicaClientSet(const std::map<int, net_address_t>& other_replicas,
+                   ReplicaState* replica_state);
   ~ReplicaClientSet();
 
   // Tries to connect all the replica client channels.
@@ -57,6 +60,7 @@ class ReplicaClientSet {
  private:
   pthread_mutex_t start_connecting_lock_;
   std::map<int, ReplicaClientState> replica_client_list_;
+  ReplicaState* replica_state_;
 };
 
 #endif  // __PAXOS_REPLICA_CLIENT_SET_INCLUDED__

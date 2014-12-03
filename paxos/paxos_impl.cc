@@ -11,17 +11,14 @@ std::unique_ptr<replicate_res>
 paxos_v1_server::replicate(std::unique_ptr<replicate_arg> arg)
 {
   std::unique_ptr<replicate_res> res(new replicate_res);
-  std::cout << "replicate request." << std::endl;
 
   init_view_request request;
   xdr::msg_ptr message(xdr::message_t::alloc(arg->arg.request.size() - 4));
-  std::cout << "raw: "<<std::string((const char*)arg->arg.request.data(), arg->arg.request.size()) <<
-      std::endl;
   memcpy(message->raw_data(), arg->arg.request.data(), arg->arg.request.size());
   xdr_from_msg(message, request);
-  std::cout << "address:" << request.newview.primary.addr << std::endl;
   replica_state_->BeginAccess();
-  std::cout << "[LEADER] new leader found." << std::endl;
+  printf("New leader promoted: rank#%d\n",
+         replica_state_->getClientUseAddressRank(request.newview.primary.addr));
   replica_state_->isLeader = false;
   replica_state_->view = request.newview;
   replica_state_->EndAccess();
@@ -58,7 +55,8 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
     replica_state_->EndAccess();
     return res;
   }
-  std::cout << "[LEADER] Becomes leader!" << std::endl;
+  printf("Promoted to Paxos leader, rank#%d.\n",
+         replica_state_->getSelfRank());
   replica_state_->isLeader = true;
   int rank = replica_state_->getSelfRank();
   replica_state_->view.primary.id =
@@ -70,9 +68,7 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
   init_view_request command;
   command.newview = replica_state_->view;
   replica_state_->EndAccess();
-  std::cout << "before_replicate!" << std::endl;
   execute_replicate_engine_->replicateCommand(command);
-  std::cout << "exit_init_view!" << std::endl;
   return res;
 }
 

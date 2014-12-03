@@ -20,8 +20,7 @@
 
 void paxos_listener_thread_entry(
     paxos_v1_server* paxos_server, const std::string& port) {
-  std::cout << "[CONNECTION] Paxos channel between replica:" << std::endl
-      << "    listening on port# " << port << std::endl;
+  printf("Paxos inter-replica channel: listening on port#%s.\n", port.c_str());
 
   xdr::rpc_tcp_listener paxos_listener(
       xdr::tcp_listen(
@@ -36,6 +35,16 @@ void paxos_listener_thread_entry(
   exit(1);
 }
 
+std::map<int, net_address_t> ReturnOtherReplicas(
+    const ReplicaState& replica_state) {
+  std::map<int, net_address_t> other_replicas;
+  for (int i = 0; i < replica_state.getQuota(); ++i) {
+    if (i != replica_state.getSelfRank()) {
+      other_replicas[i] = replica_state.getReplicaAddress(i);
+    }
+  }
+  return other_replicas;
+}
 // auto fd = xdr::tcp_connect(host_port.c_str(), listening_port.c_str());
 // auto* client = new xdr::srpc_client<paxos_v1>{fd.release()};
 
@@ -47,46 +56,44 @@ int main(int argc, char* argv[]) {
         << "quota; replica_address; client_address ..." << std::endl;
     return 1;
   }
-  // Config replica state.
+
+  // Config Paxos replica state.
   ReplicaState replica_state(argv[1], std::stoi(argv[2]));
 
-  std::map<int, net_address_t> other_replicas;
-  for (int i = 0; i < replica_state.getQuota(); ++i) {
-    if (i != replica_state.getSelfRank()) {
-      other_replicas[i] = replica_state.getReplicaAddress(i);
-    }
-  }
-  // Config the client side of inter-replica channels.
-  ReplicaClientSet replica_client_set(other_replicas);
-
-  // User interface: paxos_interface_for_user->execute(arg).
-  paxos_client_v1_server paxos_interface_for_user(&replica_state);
-
+  // Config the client side of Paxos inter-replica channels.
+  ReplicaClientSet replica_client_set(ReturnOtherReplicas(replica_state),
+                                      &replica_state);
   // Connects to other paxos replicas.
   replica_client_set.tryConnect();
 
-  std::string self_replica_address =
-      replica_state.getReplicaAddress(replica_state.getSelfRank());
+  // Config Paxos user interface: paxos_interface_for_user->execute(arg).
+  paxos_client_v1_server paxos_interface_for_user(&replica_state);
 
-  // Execute engine.
+  // Config Execute engine.
   ExecuteReplicateEngine execute_replicate_engine(
       &replica_state, &replica_client_set);
-  // paxos_server.
+
+  // Config view-change engine.
+  ChangeViewEngine change_view_engine(&replica_state, &replica_client_set,
+                                      &execute_replicate_engine);
+
+  // Config Paxos inter-replica interface: paxos_server->[command](arg).
   paxos_v1_server paxos_server(&replica_state, &replica_client_set,
                                &execute_replicate_engine);
 
-  // Starts the server side of the inter-replica channels.
+  // Starts the server side of Paxos the inter-replica channels.
+  std::string self_replica_address =
+      replica_state.getReplicaAddress(replica_state.getSelfRank());
   std::thread paxos_listener_thread(
       std::bind(
           paxos_listener_thread_entry,
           &paxos_server,
           analyzeNetworkPort(self_replica_address)));
-  ChangeViewEngine change_view_engine(&replica_state, &replica_client_set,
-                                      &execute_replicate_engine);
+
+  // Starts the view_change thread.
   std::thread change_view_engine_thread(
       std::bind(&ChangeViewEngine::run, &change_view_engine));
 
-  //std::thread
   while (true) {
     // Connects to other paxos replicas.
     // replica_client_set.tryConnect();

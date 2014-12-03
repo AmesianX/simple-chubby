@@ -6,10 +6,11 @@ PAXOS_SRC := paxos/paxos_replica.cc \
 	     paxos/change_view_engine.cc \
 	     paxos/execute_replicate_engine.cc
 
+PAXOS_HEADER := $(PAXOS_SRC:.cc=.hh)
 
 PAXOS_OBJ := $(PAXOS_SRC:.cc=.o)
 
-paxos/%.o: paxos/%.cc paxos/paxos.hh
+paxos/%.o: paxos/%.cc $(PAXOS_HEADER)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 paxos/paxos_replica: $(PAXOS_OBJ)

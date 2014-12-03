@@ -68,10 +68,10 @@ bool ChangeViewEngine::NotifyNewLeader() {
     replica_state_->view.primary.addr =
         replica_state_->getClientUseAddress(rank);
     replica_state_->mode = ReplicaState::VC_ACTIVE;
-    std::cout << "[LEADER] Becomes leader!" << std::endl;
+    printf("Promoted itself to Paxos leader, rank#%d.\n", rank);
     return true;
   } else {
-    std::cout << "Tries to notify the new leader: " << rank << std::endl;
+    printf("Figured out new Paxos leader, rank#%d.\n", rank);
     auto* replica_client = replica_client_set_->getReplicaClient(rank);
     assert(replica_client);
     init_view_arg init_view_instruction;
@@ -87,21 +87,19 @@ void ChangeViewEngine::run() {
   while (true) {
     replica_state_->BeginAccess();
     if (replica_state_->mode == ReplicaState::VC_MANAGER) {
-      std::cout << "Try to initiate view change." << std::endl;
+      std::cout << "Initiate view change." << std::endl;
       // Begin initiate a view change.
       bool becomeLeader = NotifyNewLeader();
       init_view_request command;
       command.newview = replica_state_->view;
       replica_state_->EndAccess();
-      std::cout << "Before replication." << std::endl;
       if (becomeLeader) {
         execute_replicate_engine_->replicateCommand(command);
       }
-      std::cout << "After replication." << std::endl;
       continue;
     }
     if (isLeaderDown()) {
-      std::cout << "Find Leader is down." << std::endl;
+      std::cout << "Cannot talk with Paxos leader." << std::endl;
       replica_state_->mode = ReplicaState::VC_MANAGER;
       replica_state_->EndAccess();
       // Prepare to initiate a view change after a random time sleep.

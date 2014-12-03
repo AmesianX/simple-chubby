@@ -1,10 +1,13 @@
 #include <iostream>
 #include "paxos/helper.hh"
+#include "paxos/replica_state.hh"
 #include "paxos/replica_client_set.hh"
 
 // Breaks the network address to host name and port name.
 ReplicaClientSet::ReplicaClientSet(
-    const std::map<int, net_address_t>& other_replicas) {
+    const std::map<int, net_address_t>& other_replicas,
+    ReplicaState* replica_state) {
+  replica_state_ = replica_state;
   pthread_mutex_init(&start_connecting_lock_, nullptr);
   for (auto& item : other_replicas) {
     replica_client_list_[item.first].network_address = item.second;
@@ -26,9 +29,9 @@ void ReplicaClientSet::detectFailure(
   pthread_mutex_lock(&start_connecting_lock_);
   pthread_mutex_lock(&replica_client->lock);
 
-  std::cout << "[CONNECTION] Paxos channel between replica:" << std::endl
-      << "    lost connection with address: "
-      << replica_client->network_address << std::endl;
+  printf("Lost inter-paxos connection with rank#%d.\n",
+         replica_state_->getReplicaAddressRank(
+             replica_client->network_address));
   replica_client->fd.clear();
   delete replica_client->replica_client;
   replica_client->replica_client = nullptr;
@@ -45,9 +48,8 @@ void ReplicaClientSet::tryConnect() {
       try {
         state.fd = xdr::tcp_connect(std::get<0>(host_and_port).c_str(),
                                     std::get<1>(host_and_port).c_str());
-        std::cout << "[CONNECTION] Paxos channel between replica:" << std::endl
-            << "    built connection with address: "
-            << state.network_address << std::endl;
+        printf("Built inter-paxos connection with rank#%d.\n",
+               replica_state_->getReplicaAddressRank(state.network_address));
         xdr::set_close_on_exec(state.fd.get());
         state.replica_client = new ReplicaClientType(state.fd.get());
         std::thread detect_thread(std::bind(
