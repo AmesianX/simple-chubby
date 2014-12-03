@@ -25,7 +25,6 @@ void ExecuteReplicateEngine::replicateCommand(
 
 std::string ExecuteReplicateEngine::replicateCommand(
     const std::string& request) {
-  // TODO(check whether it is the leader).
   replicate_arg command;
   StringToOpaque(request, &command.arg.request);
   for (int i = 0; i < replica_state_->getMaxNumClient(); ++i) {
