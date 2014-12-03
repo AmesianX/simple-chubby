@@ -41,7 +41,7 @@ bool ChangeViewEngine::isLeaderDown() {
 // Choose a new leader with the minimum rank.
 int ChangeViewEngine::getNewLeaderRank() {
   int result = replica_state_->getSelfRank();
-  for (int i = 0; i < replica_state_->getQuota(); ++i) {
+  for (int i = 0; i < replica_state_->getMaxNumClient(); ++i) {
     if (i != replica_state_->getSelfRank()) {
       auto* replica_client = replica_client_set_->getReplicaClient(i);
       if (replica_client) {

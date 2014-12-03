@@ -61,8 +61,11 @@ struct ReplicaState : public vc_state {
   int getSelfRank() const {
     return self_rank_;
   }
-  int getQuota() const {
+  int getConsensusQuota() const {
     return quota_;
+  }
+  int getMaxNumClient() const {
+    return max_num_client_;
   }
   int getReplicaAddressRank(const net_address_t& net_address) const {
     auto iter = std::find(replica_address_.begin(),
@@ -88,6 +91,7 @@ struct ReplicaState : public vc_state {
  private:
   pthread_mutex_t lock_;
   int quota_;
+  int max_num_client_;
   int self_rank_;
   // Address for replica communication.
   std::vector<net_address_t> replica_address_;

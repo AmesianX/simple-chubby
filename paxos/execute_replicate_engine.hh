@@ -15,6 +15,7 @@ class ExecuteReplicateEngine {
     replica_client_set_ = replica_client_set;
   }
   void replicateCommand(const init_view_request& request);
+  std::string replicateCommand(const std::string& request);
  private:
   ReplicaState* replica_state_;
   ReplicaClientSet* replica_client_set_;

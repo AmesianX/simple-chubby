@@ -8,7 +8,9 @@ ReplicaState::ReplicaState(const std::string& path_name, int self_rank) {
   std::string line;
   std::getline(config_file, line);
   quota_ = std::stoi(line);
-  for (int i = 0; i < quota_; ++i) {
+  std::getline(config_file, line);
+  max_num_client_ = std::stoi(line);
+  for (int i = 0; i < max_num_client_; ++i) {
     std::getline(config_file, line);
     replica_address_.push_back(net_address_t(line));
     std::getline(config_file, line);

@@ -9,7 +9,7 @@ void ExecuteReplicateEngine::replicateCommand(
   xdr::msg_ptr message = xdr::xdr_to_msg(request);
   command.arg.request.append(
       (const unsigned char*)message->raw_data(), message->raw_size());
-  for (int i = 0; i < replica_state_->getQuota(); ++i) {
+  for (int i = 0; i < replica_state_->getMaxNumClient(); ++i) {
     if (i != replica_state_->getSelfRank()) {
       auto* replica_client = replica_client_set_->getReplicaClient(i);
       if (replica_client) {
@@ -19,4 +19,9 @@ void ExecuteReplicateEngine::replicateCommand(
       }
     }
   }
+}
+
+std::string ExecuteReplicateEngine::replicateCommand(
+    const std::string& request) {
+  return std::string();
 }

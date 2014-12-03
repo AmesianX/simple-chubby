@@ -38,7 +38,7 @@ void paxos_listener_thread_entry(
 std::map<int, net_address_t> ReturnOtherReplicas(
     const ReplicaState& replica_state) {
   std::map<int, net_address_t> other_replicas;
-  for (int i = 0; i < replica_state.getQuota(); ++i) {
+  for (int i = 0; i < replica_state.getMaxNumClient(); ++i) {
     if (i != replica_state.getSelfRank()) {
       other_replicas[i] = replica_state.getReplicaAddress(i);
     }
@@ -53,7 +53,8 @@ int main(int argc, char* argv[]) {
     std::cout << "./paxos_replica [config_file_name]"
         << "[replica_rank_start_from_0]" << std::endl
         << "config file format:" << std::endl
-        << "quota; replica_address; client_address ..." << std::endl;
+        << "quota; number_of_clients; "
+        << "replica_address; client_address ..." << std::endl;
     return 1;
   }
 
@@ -94,10 +95,10 @@ int main(int argc, char* argv[]) {
   std::thread change_view_engine_thread(
       std::bind(&ChangeViewEngine::run, &change_view_engine));
 
+  std::string line;
   while (true) {
-    // Connects to other paxos replicas.
-    // replica_client_set.tryConnect();
-    // sleep(1);
+    std::getline(std::cin, line);
+    execute_replicate_engine.replicateCommand(line);
   }
   return 0;
 }
