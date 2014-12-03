@@ -11,6 +11,8 @@ chubby_client::chubby_client(int fd) : fd_(fd)
                        std::placeholders::_1));
   pollth_ = std::thread(std::bind(&chubby_client::poll_loop, this));
   evcbth_ = std::thread(std::bind(&chubby_client::evcb_loop, this));
+  pollth_.detach();
+  evcbth_.detach();
 }
 
 chubby_client::chubby_client(chubby_client &&c) : fd_(c.fd_)
