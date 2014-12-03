@@ -62,6 +62,7 @@ bool ChangeViewEngine::NotifyNewLeader() {
   int rank = getNewLeaderRank();
   if (rank == replica_state_->getSelfRank()) {
     // Becomes leader itself.
+    // TODO: only isLeader, view.primary.id, view.primary.addr is maintained.
     replica_state_->isLeader = true;
     replica_state_->view.primary.id =
         replica_state_->getReplicaAddress(rank);
@@ -76,7 +77,13 @@ bool ChangeViewEngine::NotifyNewLeader() {
     assert(replica_client);
     init_view_arg init_view_instruction;
     // Notifies the new leader.
-    replica_client->init_view(init_view_instruction);
+    auto result = replica_client->init_view(init_view_instruction);
+    if (!result->succeed) {
+      replica_state_->isLeader = false;
+      replica_state_->view.primary.id = replica_state_->getReplicaAddress(rank);
+      replica_state_->view.primary.addr =
+          replica_state_->getClientUseAddress(rank);
+    }
     replica_client_set_->releaseReplicaClient(rank);
     replica_state_->mode = ReplicaState::VC_ACTIVE;
     return false;

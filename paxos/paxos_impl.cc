@@ -53,6 +53,7 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
   replica_state_->BeginAccess();
   if (replica_state_->isLeader) {
     replica_state_->EndAccess();
+    res->succeed = false;
     return res;
   }
   printf("Promoted to Paxos leader, rank#%d.\n",
@@ -69,6 +70,7 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
   command.newview = replica_state_->view;
   replica_state_->EndAccess();
   execute_replicate_engine_->replicateCommand(command);
+  res->succeed = true;
   return res;
 }
 
