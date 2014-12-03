@@ -276,7 +276,8 @@ api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg,
   FileHandler *fd = findFd(client_id, *arg);
   if(fd == nullptr) {
     // No match FD found
-    // TODO throw an exception
+    res->discriminant(1);
+    res->errCode() = BAD_ARG;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
@@ -310,7 +311,8 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
   FileHandler *fd = findFd(client_id, arg->fd);
   if(fd == nullptr) {
     // No match FD found
-    // TODO throw an exception
+    res->discriminant(1);
+    res->errCode() = BAD_ARG;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }

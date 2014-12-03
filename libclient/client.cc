@@ -65,10 +65,10 @@ int Client::decrement(int input) {
 void
 Client::printFdList()
 {
-  cout<<"fdList:"<<endl;
+  cerr<<"fdList:"<<endl;
   for(auto& kv : fdList){
     auto fd = kv.second;
-    cout<<"\t"<< kv.first 
+    cerr<<"\t"<< kv.first 
 	<<" ("<<fd.file_name<<", "<<fd.instance_number
 	<<", "<<fd.magic_number<<")"<<endl;
   }
@@ -141,10 +141,13 @@ Client::getContentsAndStat(FileHandlerId fdId,
     auto r = client->getContentsAndStat(args);
     if(r->discriminant() == 0) {
       // RPC returned normally
-      *file_content = r->val().content;
-      *meta_data = r->val().stat;
+      if (file_content != nullptr)
+	*file_content = r->val().content;
+      if (meta_data != nullptr)
+	*meta_data = r->val().stat;
       return true;
-    }
+    } else
+      throw ClientException(static_cast<ClientError>(r->errCode()));
   }
   return false;
 }

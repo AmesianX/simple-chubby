@@ -99,10 +99,9 @@ private:
   void open(const char *file);
   void close();
   void sqlexec(const char *fmt, ...);
-  std::string getParentName(const std::string &name);
-  bool hasName(const std::string &name);
 
   sqlite3 *db;
+  std::hash<std::string> str_hash;
 
   const std::string NO_OWNER = "empty";
 };

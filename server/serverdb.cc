@@ -2,12 +2,11 @@
 #include <assert.h>
 #include <stdint.h>
 #include <errno.h>
-
 #include <unistd.h>
 
-#include <set>
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <memory>
 
 #include "sqlite3.h"
@@ -30,35 +29,98 @@ ServerDB::~ServerDB()
 
 
 
-bool
-ServerDB::hasName(const string &path)
+string
+getParentName(const string &key)
 {
-  SQLStmt s(db, "SELECT name FROM fs WHERE name = \"%s\"",
-            path.c_str());
- 
-  return s.step().row();
+  // find the lenth of the parent of KEY
+  int pos = key.length() - 1;
+  while (pos > 0) { /* if pos==0, the parent is root, 
+		       then break and return "/" */
+    if (key[pos] == '/') break;
+    --pos;
+  }
+  if (pos == 0)
+    return "/";
+  else 
+    return string(key, 0, pos);  // create a substring of key
+}
+
+inline string
+dirContentCreate(const string &content, const string &node)
+{
+  return string(content + "|" + node);
+}
+
+
+inline string
+dirContentDelete(const string &content, const string &node)
+{
+  std::string str;
+  std::stringstream ss(content);
+  /* split CONTENT by a delim '|', append tokens to a new string STR
+     except token equal to NODE. */
+  std::string token;
+  char delim = '|';
+  while (std::getline(ss, token, delim)) {
+    if(node.compare(token) != 0)
+      str.append(token);
+  }
+  return str;
 }
 
 bool
 ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number)
 {
-  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<", "<<instance_number<<") ";
-  string parent_name = getParentName(file_name);
-  bool file_exists = hasName(file_name);
-  bool parent_exists = parent_name.compare("/") == 0 ||  // root dir ('/') always exists
-    hasName(parent_name);
-    
-  if (file_exists || !parent_exists){
-    cout<< " fails."<<endl;
+  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir
+      <<", "<<instance_number<<") ";
+
+  // check if node exits
+  SQLStmt node_q(db, "SELECT name FROM fs WHERE name = \"%s\"", file_name.c_str());
+  if(node_q.step().row()) {
+    cout << " fails (node exits)."<<endl;
     return false;
   }
-  // TODO check parent is directory
+
+  // check if parent node is an existing directory
+  std::string parent_name = getParentName(file_name);
+  std::string parent_content;
+  uint64_t parent_cn;
+  if (parent_name.compare("/") != 0) { // root dir ('/') always exists
+    SQLStmt par_q(db, "SELECT content, content_generation_number, is_directory "
+		  "FROM fs WHERE name = \"%s\"",
+		  parent_name.c_str());
+    par_q.step();
+    if(!par_q.row()) {
+      cout << "fails (parent node doesn't exit)."<<endl;
+      return false;
+    }
+    if(par_q.integer(2) == 0) {
+      cout << "fails (parent node is not a directory)."<<endl;
+      return false;
+    }
+    // get the directory content and content number
+    parent_content = par_q.str(0);
+    parent_cn = par_q.integer(1);
+  }
 
   // begins to create the file
   sqlexec("BEGIN;");
-  sqlexec("INSERT INTO fs (name, instance_number, is_directory) VALUES (\"%s\", %d, %d);",
+  // insert node
+  sqlexec("INSERT INTO fs (name, instance_number, is_directory) "
+	  "VALUES (\"%s\", %d, %d);",
 	  file_name.c_str(), instance_number, is_dir);
-  // TODO update the content field of parent dir
+  // update the content field of parent dir
+  if (parent_name.compare("/") != 0) {  // we don't maintain root node
+    string new_parent_c = dirContentCreate(parent_content, file_name);
+    uint64_t new_parent_cn = parent_cn + 1;
+    uint64_t new_checksum = str_hash(new_parent_c);
+    
+    sqlexec("UPDATE fs SET content = \"%s\", "
+	    "content_generation_number = %d, "
+	    "file_content_checksum = %d  WHERE name = \"%s\";",
+	    new_parent_c.c_str(), new_parent_cn,
+	    new_checksum, parent_name.c_str());
+  }
   sqlexec("COMMIT;");
   cout<< " succeeds."<<endl;
 
@@ -70,20 +132,16 @@ bool
 ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 {
   cout<<"db: checkAndOpen("<<file_name<<", "<<instance_number<<") ";
-  bool file_exists = hasName(file_name);
-  if (!file_exists) {
-    cout<< " fails."<<endl;
+
+  // check if node exits
+  SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
+	    file_name.c_str());
+  s.step();
+  if(s.step().row()) {
+    cout << " fails (node exits)."<<endl;
     return false;
   }
-
-  SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
-            file_name.c_str());
-
-  s.step();
-  if (!s.row()) {
-    cout << "No Key: " << file_name << endl;
-    throw runtime_error("Key not present");
-  }
+  
   *instance_number = s.integer(0);
   cout<< " succeeds."<<endl;
 
@@ -95,7 +153,8 @@ bool
 ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
 {
   cout<<"db: checkAndDelete("<<file_name<<", "<<instance_number<<") ";
-  SQLStmt s(db, "SELECT lock_owner, instance_number, is_directory FROM fs WHERE name = \"%s\"",
+  SQLStmt s(db, "SELECT lock_owner, instance_number, is_directory, content "
+	    "FROM fs WHERE name = \"%s\"",
             file_name.c_str());
 
   s.step();
@@ -119,33 +178,62 @@ ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
     return false;
   }
 
-  // check dir is empty
+  // check if dir is empty
   bool is_dir = s.integer(2);
   if (is_dir){
-    // query for its children
-    SQLStmt s(db, "SELECT name FROM fs WHERE name LIKE '%s/%%'",
-	      file_name.c_str());
-    s.step();
-    if (s.row()) {
-      // if returned non-empty result
+    std::string content = s.str(3);
+    if(content.compare("") != 0) {
       cout<< " fails. dir is not empty"<<endl;
       return false;
     }
   }
+  
+  // query the content of parent dir
+  std::string parent_name = getParentName(file_name);
+  std::string parent_content;
+  uint64_t parent_cn;
+  if (parent_name.compare("/") != 0) { // root dir ('/') always exists
+    SQLStmt par_q(db, "SELECT content, content_generation_number, is_directory "
+		  "FROM fs WHERE name = \"%s\"",
+		  parent_name.c_str());
+    par_q.step();
+    assert(par_q.row());
+    assert(par_q.integer(2) == 1);
+    // get the directory content and content number
+    parent_content = par_q.str(0);
+    parent_cn = par_q.integer(1);
+  }
 
-  // delete 
+  // execute delete
   sqlexec("BEGIN;");
+  // delete node
   sqlexec("DELETE FROM fs WHERE name = \"%s\";", file_name.c_str());
+  // update the content field of parent dir
+  if (parent_name.compare("/") != 0) {  // we don't maintain root node
+    string new_parent_c = dirContentDelete(parent_content, file_name);
+    uint64_t new_parent_cn = parent_cn + 1;
+    uint64_t new_checksum = str_hash(new_parent_c);
+    
+    sqlexec("UPDATE fs SET content = \"%s\", "
+	    "content_generation_number = %d, "
+	    "file_content_checksum = %d  WHERE name = \"%s\";",
+	    new_parent_c.c_str(), new_parent_cn,
+	    new_checksum, parent_name.c_str());
+  }
   sqlexec("COMMIT;");
   cout<< " succeeds."<<endl;
     
   return true;
 }
+
+
 bool
 ServerDB::checkAndRead(const std::string &file_name, uint64_t instance_number,
 		       std::string *content, MetaData *meta)
 {
-  SQLStmt s(db, "SELECT content, instance_number, content_generation_number, lock_generation_number, file_content_checksum, is_directory FROM fs WHERE name = \"%s\"",
+  SQLStmt s(db, "SELECT content, instance_number, "
+	    "content_generation_number, lock_generation_number, "
+	    "file_content_checksum, is_directory FROM fs WHERE name = \"%s\"",
 	    file_name.c_str());
 
   s.step();
@@ -173,7 +261,8 @@ bool
 ServerDB::checkAndUpdate(const std::string &file_name, uint64_t instance_number,
 			 const std::string &content)
 {
-  SQLStmt s(db, "SELECT instance_number, content_generation_number FROM fs WHERE name = \"%s\"",
+  SQLStmt s(db, "SELECT instance_number, content_generation_number "
+	    "FROM fs WHERE name = \"%s\"",
 	    file_name.c_str());
 
   s.step();
@@ -188,14 +277,15 @@ ServerDB::checkAndUpdate(const std::string &file_name, uint64_t instance_number,
     return false;
     
   uint64_t new_content_generation_number = s.integer(1) + 1;
-    
-  std::hash<std::string> str_hash;
   uint64_t new_checksum = str_hash(content);
 
   // do update
   sqlexec("BEGIN;");
-  sqlexec("UPDATE fs SET content = \"%s\", content_generation_number = %d, file_content_checksum = %d  WHERE name = \"%s\";",
-	  content.c_str(), new_content_generation_number, new_checksum, file_name.c_str());
+  sqlexec("UPDATE fs SET content = \"%s\", "
+	  "content_generation_number = %d, "
+	  "file_content_checksum = %d  WHERE name = \"%s\";",
+	  content.c_str(), new_content_generation_number,
+	  new_checksum, file_name.c_str());
   sqlexec("COMMIT;");
 
   return true;
@@ -208,7 +298,8 @@ ServerDB::testAndSetLockOwner(const std::string &file_name, uint64_t instance_nu
   cout<<"db: testAndSetLockOwner("<<file_name<<", "<<instance_number
       <<", "<< client_id<<") ";
   
-  SQLStmt s(db, "SELECT instance_number, lock_owner, lock_generation_number FROM fs WHERE name = \"%s\"",
+  SQLStmt s(db, "SELECT instance_number, lock_owner, "
+	    "lock_generation_number FROM fs WHERE name = \"%s\"",
 	    file_name.c_str());
 
   s.step();
@@ -237,7 +328,8 @@ ServerDB::testAndSetLockOwner(const std::string &file_name, uint64_t instance_nu
 
   // do update
   sqlexec("BEGIN;");
-  sqlexec("UPDATE fs SET lock_owner = \"%s\", lock_generation_number = %d WHERE name = \"%s\";",
+  sqlexec("UPDATE fs SET lock_owner = \"%s\", "
+	  "lock_generation_number = %d WHERE name = \"%s\";",
 	  client_id.c_str(), new_lock_generation_number, file_name.c_str());
   sqlexec("COMMIT;");
   cout<< " succeeds."<<endl;
@@ -292,14 +384,14 @@ ServerDB::create(const char *file)
     assert(false);
   }
   string table_params = string("(") + 
-    "name TEXT PRIMARY KEY NOT NULL, " +
-    "content TEXT, " +
-    "lock_owner TEXT DEFAULT \"" + NO_OWNER + "\", " +
-    "instance_number INT, " +
-    "content_generation_number INT DEFAULT 0, " +
-    "lock_generation_number INT DEFAULT 0, " +
-    "file_content_checksum INT DEFAULT 0, " +
-    "is_directory INT " +
+    "name TEXT PRIMARY KEY NOT NULL, "
+    "content TEXT DEFAULT '', "
+    "lock_owner TEXT DEFAULT \"" + NO_OWNER + "\", "
+    "instance_number INT, "
+    "content_generation_number INT DEFAULT 0, "
+    "lock_generation_number INT DEFAULT 0, "
+    "file_content_checksum INT DEFAULT 0, "
+    "is_directory INT "
     ");";
   sqlexec("BEGIN;");
   sqlexec((string("CREATE TABLE fs ") + table_params).c_str());
@@ -358,21 +450,6 @@ ServerDB::sqlexec(const char *fmt, ...)
   }
 }
 
-string
-ServerDB::getParentName(const string &key)
-{
-  // find the lenth of the parent of KEY
-  int pos = key.length() - 1;
-  while (pos > 0) { /* if pos==0, the parent is root, 
-		       then break and return "/" */
-    if (key[pos] == '/') break;
-    --pos;
-  }
-  if (pos == 0)
-    return "/";
-  else 
-    return string(key, 0, pos);  // create a substring of key
-}
 
 #if 0
 
