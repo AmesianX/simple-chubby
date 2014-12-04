@@ -5,7 +5,7 @@ TARGET = simple-chubby
 TEXFILES = $(wildcard *.tex)
 PDF_FIGURES = $(wildcard figs/*.pdf)
 PNG_FIGURES = $(wildcard figs/*.png)
-FIGURES= $(PDF_FIGURES) $(PNG_FIGURES)
+FIGURES = $(PDF_FIGURES) $(PNG_FIGURES)
 TEXFILE = $(TARGET).tex
 PDF = $(TARGET).pdf
 
