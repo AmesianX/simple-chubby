@@ -1,0 +1,27 @@
+\section{Applications}
+\label{section:apps}
+
+We implemented two example user applications using the SimpleChubby service,
+namely leader election and double barrier. These applications use all the
+API categories described in Section~\ref{section:api}, and are able to
+survive both client failure and server failure. Thus, they demonstrate
+the correctness and efficiency of our lock service.
+
+\subsection{Leader Election}
+
+Leader election is an application that elects one out of a given group
+of clients as the leader. At any given time, at most one client among the
+group can be elected as the leader, and other clients should be able to
+find out who is the leader, if it exists.
+
+We implement leader election as following: all clients open a single
+specified file and try to acquire its lock. The one who succeed becomes
+the leader, and write its identity into the file. Others read the file
+to figure out who is the leader. The leader continues to hold the lock.
+Also, all clients subscribe to the lock-change event, in order to compete
+for the new leader when the current leader dies. Clients also subscribe
+to the content-change event to read out the new leader when changed.
+
+\subsection{Double Barrier}
+
+

@@ -2,16 +2,18 @@
 
 \subsection{Terminology}
 
-\begin{itemize}
+\begin{itemize}[noitemsep]
   \item Users.
-  People who uses SimpleChubby user-level interfaces to write a synchronization service.
+  Programmers who use SimpleChubby user-level interfaces to write a user-defined synchronization service.
   \item Servers.
   SimpleChubby service runs on a set of processes called servers.
   \item Clients.
   A user-written program runs on a process called a client, which connects to the server
-  and cooperates with the server to implement a synchronization service.
+  and cooperates with the server to implement SimpleChubby lock service.
   \item Leader server.
+  One of servers is responsible for processing requests from the clients, and coordinates other servers.
   \item Follower server.
+  The servers other than the leader servers.
 \end{itemize}
 
 \subsection{System architecture}
@@ -19,16 +21,61 @@
 SimpleChubby implementation consists of a client library linked to user programs,
 and a server executable running on each server.
 
-The client library offers a set of interfaces for users, and talks with the leader
-server to implement the interfaces. 
+\subsubsection{Client side}
+The client library offers a set of interfaces for users to access SimpleChubby lock service,
+and talks with the leader server to implement the interfaces. 
 
-The user does not talk with the leader server directly since the client library
-needs to know what requests the user issues so that it can help a leader server
-to recover lost states when server fails over.
+User code does not talk with the leader server directly since the client library
+needs to know what requests are issued so that it can help a leader server
+to recover lost states during a server fail-over.
 Meanwhile, the client library can do certain sanity checks before sending requests
 to the leader server.
 
-When a user invokes the interfaces to access files or perform locking operations,
+The client library also cooperates with the servers to achieve server fail-over.  
+It tries to connect to a new leader server once the old one fails,
+and help the new server recover such lost states
+as open files, registered events, and lock waiting queues
+using client side information.
+
+\subsubsection{Server side}
+
+SimpleChubby runs a group of servers to provide a reliable lock service.
+
+A server can run as the leader server or as a follower server,
+as decided by a consensus protocol.
+When running as a follower server, it serves as a replica to duplicate critical
+operations happening on the leader server, and prepares to be promoted to a leader server.
+When running as a leader server, it accepts and processes requests from clients.
+The leader server also monitors client failures, and clears its states after failure,
+i.e., reclaiming its holding locks after a certain timeout.
+
+The leader server maintains two categories of states.
+The first category of states includes lock ownership and file system content. These
+states are made persistent, and accesses or changes to them go through a consensus protocol.
+The second category of states includes active client lists,
+open files, registered events, and lock waiting queues.
+Theses states can be recovered with the help of clients,
+and thus are not persistent and does not go through a consensus protocol.
+
+SimpleChubby does not make all the leader server states persistent by a consensus protocol,
+because it takes too much overhead to maintain all the states,
+but certain states can be easily recovered
+using client side information, for example, lock waiting queues.
+File content and lock ownership cannot be reliably recovered by client
+side information, and thus has to be made persistent by a consensus protocol.
+For example, when a client loses connection with the leader server,
+and reconnects later,
+it might assume owning a lock, which other clients might not agree on.
+In this case, the client side information is not enough for recovering
+the lock ownership reliably.
+ 
+\subsection{Details about the client}
+To be simple, and avoid overwhelming the server, the client process will block until a remote procedure call is
+replied unless the leader server fails. That is, only one outstanding remote procedure call is allowed between
+a client and the leader server.
+
+\subsection{Details about the server}
+When user code invokes the interfaces to access files or perform locking operations,
 the client library performs corresponding remote procedure calls to the leader server,
 waits for replies from the leader server, and returns the result back to the user.
 A user can also register certain events,
@@ -37,36 +84,3 @@ in the client library,
 and it will be notified when the registered events happen.
 Event notification happens asynchronized with other user interface calls.
 
-The client library also cooperates with the servers for server fail-over.  
-It will try to reconnect to a new leader server once the old one fails,
-and help the new server recover lost states,
-such as opened files, and lock waiting queues.
-
-The server executable can run as the leader server or as a follower server,
-as decided by the Viewstamp consensus protocol.
-
-When running as a follower server, it serves as a replica to duplicate critical
-operations happening on the leader server, and prepares to be promoted to a leader
-server.
-
-When running as a leader server, it accepts and processes requests from clients.
-The leader server also monitors client failures, and clears its states after failure,
-i.e., reclaiming its holding locks after a certain timeout.
-
-The leader server maintains two categories of states.
-The first category of states includes lock ownership and file system content. These
-states are made persistent, and accesses or changes to them go through the consensus
-protocol.
-The second category of states includes open client lists, lock waiting queues,
-and open file handlers.
-Theses states can be recovered with the help of clients,
-and thus are not persistent without going through consensus protocol.
-
-SimpleChubby does not make all the leader server states persistent by the consensus
-protocol, because some states change much often but easy to be recovered,
-and list or queue data structures are not easy to be stored into SQL database.
- 
-\subsection{Details about the client}
-To be simple, and avoid overwhelming the server, the client process will block until a remote procedure call is
-replied unless the leader server fails. That is, only one outstanding remote procedure call is allowed between
-a client and the leader server.
