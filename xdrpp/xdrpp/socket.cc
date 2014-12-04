@@ -338,6 +338,10 @@ tcp_listen(const char *service, int family)
   unique_fd fd {socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)};
   if (!fd)
     throw std::system_error(errno, std::system_category(), "socket");
+  int option = 1;
+  setsockopt(fd.get(), SOL_SOCKET, SO_REUSEADDR,
+             &option, sizeof(option));
+
   if (bind(fd.get(), ai->ai_addr, ai->ai_addrlen) == -1)
     throw std::system_error(errno, std::system_category(), "bind");
   if (listen (fd.get(), 5) == -1)
