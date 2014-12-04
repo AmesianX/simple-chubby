@@ -1,6 +1,97 @@
 data structure
 
-database
+On the server side, SimpleChubby keeps two types of data. First, the
+leader server maintains in-memory data structure, which will be lost
+after a leader change. Second, data need to be persistent are duplicated
+among leader and follower servers using Paxos.
+
+
+
+in-memory data structure
+
+SimpleChubby uses a file handler mechanism. The file handler can be very
+handy when a client is sensitive to obsolete files. Since the server
+rejects any requests with invalid file handlers (i.e. meta-data in the file
+handler does not match with server's), the client detects that the node has
+been deleted or re-created after receiving a failure of an operation with
+the previously opened file handler. The server also reject any fake file
+handlers by check the digital signitures in them signed during succeeded
+fileOpen() operations.
+
+However, maintaining the information of file handlers on the servers can
+be challenging, since queries for file handlers are frequent and the lengths
+of the opened file handler lists dynamically change. Therefore, we choose
+to keep this information in memory instead of in persistent store, in order
+to reduce the overhead of the Paxos protocol. In normal case, a file handler
+is create in fileOpen() and destoyed in either fileClose() or fileDelete().
+All requests from clients except fileOpen() take file handlers as arguments,
+and the server returns failures if the file handlers do not match with
+server's.
+
+Another part of in-memory data structures is the queues of waiting lock acquire
+requests for different nodes. Upon any acquire() requests, the leader server
+adds the clients' session information into the queues and blocks the PRC
+if the locks are held by other clients.
+In a release() request, the server pops out a waiting session
+(if there are any) on the same lock, modifies the lock owner, and unblocks and
+returns the correspongding acquire() request.
+
+We also store clients' request records for events in the leader server's memory.
+For each type of event, there are separate lists for different nodes.
+The client's session information will be added to the lists during fileOpen()
+request if any event registration flags are asserted. Once a event happens,
+the server iterates through the list, and send the event to the client if the
+session is still alive. The list is then deleted.
+
+
+
+persistent data store
+
+The main part of persistent data is the Chubby file system. Each node has
+a full path name as the key, a string of content, the meta data defined
+in the SimpleChubby API, and a lock owner field. A normal node open returns
+the instance number of the node in order to form a file handler, while
+a node creation operation triggered by fileOpen() takes a unique ascending
+instance number from server and creates a node in the file system. All other
+operations on the filesystem (including operations that change lock owners)
+take both the name and the instance number of the node as arguments, and will
+abort if the node does not exist or the instance number doesn't match the
+meta data.
+
+Another persistent data is the value of the next instance number. This global
+value is increased by one every time a new node is created, and is passed
+to the node creation operation as discussed above. It works as a timestamp,
+which helps the server detect and rejects the clients' requests using obsolete
+file handlers.
+
+
 
 failure
+
+During a client failure, the leader server initiates release() operation for
+all the locks previously held by the failed client. For garbage collection
+purpose, the server also deletes all the file handlers opened by the client,
+outstanding lock acquire requests sent by the client, and all the registered
+events from the client.
+
+When the leader server fails, the Paxos protocol elects a new leader. After
+the leader change, all persistent data remain consistent, while the in-memory
+data structures at the new leader need to be reconstructed. There are two
+methods for the reconstruction: clients' sending reopen PRCs intentionally,
+or clients' sending other normal PRCs with valid file handlers.
+
+To precisely reconstruct the queues of outstanding lock acquire requests and
+the queues of registered event from clients, the client library should keep
+a copy of these requests locally and send a set of reopen requests and
+potentially a lock acquire request to the new leader during a leader change.
+
+However, it is not necessary to reconstruct the information of all the file
+handlers held by clients eagerly. Instead, we reconstruct the file handler
+information in the normal case of the SimpleChubby processing after the
+leader change. If the new leader receives a request with a file handler that
+missing in the leader's memory, it checks the signiture of the file
+handler and initiates a reopen. If the reopen succeeds (i.e. the node exits
+and the meta data matches), the leader add this file handler into its memory.
+
+
 
