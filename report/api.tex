@@ -1,0 +1,54 @@
+\section{User API}
+\label{section:api}
+
+The client provides an interfaces identical to the Chubby API~\cite{burrows2006chubby}.
+We support file or directory operations, content
+read and write, lock operations, and event handler registration.
+The full list of the API is shown in Figure~\ref{fig:api}.
+
+\begin{figure}
+\centering
+\begin{lstlisting}[language=C++,
+    basicstyle=\footnotesize\ttfamily,
+    commentstyle=\bfseries,
+    deletekeywords={delete},
+    morekeywords={FileHandlerId, string, Mode, FileContent, MetaData, ChubbyEvent, EventCallback}]
+/* File and directory operations */
+FileHandlerId open(const string &fname,
+        Mode mode);
+void close(FileHandlerId fdId);
+bool delete(FileHandlerId fdId);
+
+/* Content read and write */
+bool getContentsAndStat(FileHandlerId fdId,
+        FileContent *content,
+        MetaData *data);
+bool setContents(FileHandlerId fdId,
+        const FileContent &content);
+
+/* Lock operations */
+void acquire(FileHandlerId fdId);
+bool tryAcquire(FileHandlerId fdId);
+void release(FileHandlerId fdId);
+
+/* Event handler registration */
+void registerCallback(ChubbyEvent e,
+        EventCallback cb);
+void deleteCallback(ChubbyEvent e);
+\end{lstlisting}
+\caption{SimpleChubby API}
+\label{fig:api}
+\end{figure}
+
+Applications use \texttt{Open()} to create a handler associated with a file
+or directory handler, and the other functions all operate on the handler.
+The \texttt{mode} argument in the \texttt{Open()} function specifies the read
+or write mode of the handler, as well as the events to which this client subscribes.
+The event handler callback functions are supplied by user applications and
+registered beforehand, which will be called by the client library when
+corresponding events are received.
+
+The user applications can use this API to perform various synchronization
+jobs. We provide two examples in Section~\ref{section:apps}.
+
+
