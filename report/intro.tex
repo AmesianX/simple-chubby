@@ -84,3 +84,33 @@ in the client library,
 and it will be notified when the registered events happen.
 Event notification happens asynchronized with other user interface calls.
 
+\subsection{TODO}
+Server part needs a good starting paragraph.
+
+The file hanlder is important.
+
+Application: group membership, at least one experiment.
+
+What is implemented and what is not.
+
+\subsection{Service Sematics}
+
+Draft.
+
+The sematics of locks, and the behavoir after fail-over.
+
+Access to files are serialized with/without fail-over.
+
+Once a file is open, always read the same version. Other deletion will
+reflect immediately, because of file handlers, and instance number.
+
+a lock is given to only one client. Once a client fails, the lock
+is reclaimed after a timeout. Once the leader fails, the lock remains
+in the client, but will be reclaimed if the client fails to connect
+to the new leader after a certain timeout.
+
+lock might be given to two clients, sequencer as mentioned in Chubby.
+
+Events are delivered asynchronized, different from Zookeeper. After
+server fail-over, once the client reconnects, no events will be missed.
+
