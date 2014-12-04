@@ -4,11 +4,11 @@
 
 \begin{itemize}
   \item Users.
-  People who uses SimpleChuby user-level interfaces to write a synchronization service.
+  People who uses SimpleChubby user-level interfaces to write a synchronization service.
   \item Servers.
   SimpleChubby service runs on a set of processes called servers.
   \item Clients.
-  A user-writen program runs on a process called a client, which connects to the server
+  A user-written program runs on a process called a client, which connects to the server
   and cooperates with the server to implement a synchronization service.
   \item Leader server.
   \item Follower server.
@@ -24,7 +24,7 @@ server to implement the interfaces.
 
 The user does not talk with the leader server directly since the client library
 needs to know what requests the user issues so that it can help a leader server
-to recover lost states when server failover.
+to recover lost states when server fails over.
 Meanwhile, the client library can do certain sanity checks before sending requests
 to the leader server.
 
@@ -35,9 +35,9 @@ A user can also register certain events,
 such as a file modification event or a lock ownership change event, 
 in the client library,
 and it will be notified when the registered events happen.
-Event notification happens asynchonized with other user interface calls.
+Event notification happens asynchronized with other user interface calls.
 
-The client library also cooperates with the servers for server failover.  
+The client library also cooperates with the servers for server fail-over.  
 It will try to reconnect to a new leader server once the old one fails,
 and help the new server recover lost states,
 such as opened files, and lock waiting queues.
@@ -53,11 +53,11 @@ When running as a leader server, it accepts and processes requests from clients.
 The leader server also monitors client failures, and clears its states after failure,
 i.e., reclaiming its holding locks after a certain timeout.
 
-The leader server maintains two catogeries of states.
-The first catogery of states includes lock ownership and file system content. These
+The leader server maintains two categories of states.
+The first category of states includes lock ownership and file system content. These
 states are made persistent, and accesses or changes to them go through the consensus
 protocol.
-The second catogery of states includes open client lists, lock waiting queues,
+The second category of states includes open client lists, lock waiting queues,
 and open file handlers.
 Theses states can be recovered with the help of clients,
 and thus are not persistent without going through consensus protocol.
@@ -70,5 +70,3 @@ and list or queue data structures are not easy to be stored into SQL database.
 To be simple, and avoid overwhelming the server, the client process will block until a remote procedure call is
 replied unless the leader server fails. That is, only one outstanding remote procedure call is allowed between
 a client and the leader server.
-
-Cite: \cite{nothing}
