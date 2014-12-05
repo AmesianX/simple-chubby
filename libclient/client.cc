@@ -223,12 +223,12 @@ Client::release(FileHandlerId fdId)
 }
 
 void
-Client::register_callback(ChubbyEvent e, EventCallback cb) {
+Client::registerCallback(ChubbyEvent e, EventCallback cb) {
   client->register_callback(e, cb);
 }
 
 void
-Client::delete_callback(ChubbyEvent e) {
+Client::deleteCallback(ChubbyEvent e) {
   client->delete_callback(e);
 }
 
