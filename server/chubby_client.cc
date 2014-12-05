@@ -74,9 +74,9 @@ void chubby_client::evcb_loop() {
       if (func != ecbs_.end())
         func->second(arg.fname);
       else {
-        std::string s = "No callback registered for event ";
-        s += std::to_string(arg.event);
-        std::clog << s << std::endl;
+        //std::string s = "No callback registered for event ";
+        //s += std::to_string(arg.event);
+        //std::clog << s << std::endl;
       }
     }
     catch (const xdr_runtime_error &e) {

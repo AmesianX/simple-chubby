@@ -49,8 +49,7 @@ Chubby user has to provide a file handler when accessing or editing
 a file.
 
 A file handler can become invalid without the user explicitly closing
-it, when either the master fails over or the file is explicitly deleted
-by other Chubby users.
+it, when the file is explicitly deleted by other Chubby users.
 
 struct FileHandler {
   uint64_t magic_number;  // To avoid faking file handlers.
@@ -82,7 +81,7 @@ const uint64_t CREATE_DIRECTORY = 0x4;
 // and WRITE are ignored.
 //
 // If CREATE_DIRECTORY is not set and WRITE is set, it open a node in write
-// mode, and create the node if it does not exist.
+// mode, and create the file node if it does not exist.
 //
 // If neither CREATE_DIRECTORY nor WRITE is set, and READ is set, it opens
 // a node in read-only mode, and return FAIL if the node does not exist.

@@ -18,6 +18,8 @@ const uint64_t WRITE = 0x2;
 const uint64_t CREATE_DIRECTORY = 0x4;
 const uint64_t CREATE_FILE = 0x8;
 
+const uint64_t EPHEMERAL = 0x10;
+
 const uint64_t EV_LOCK_CHANGED = 0x100;
 const uint64_t EV_CONTENT_MODIFIED = 0x200;
 typedef std::function<void(std::string)> EventCallback;
