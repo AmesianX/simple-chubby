@@ -22,19 +22,19 @@ the client failure cannot be detected.
 
 \subsection{Server Failover}
 
-When the leader server fails, the Paxos protocol elects a new leader. After
+When the leader server fails, the Viewchange protocol elects a new leader. After
 the leader change, all persistent data remain consistent. However, the in-memory
 data structures at the new leader need to be reconstructed. The new leader
-does this partially by scanning the persistent data. The other missing data
-will be inferred from future client RPC requests.
-
+does this partially by scanning the persistent data. 
+Two methods are used for the reconstruction.
+First, a client sends reopen requests after it connects to the new leader.
 To precisely reconstruct the queues of outstanding lock acquire requests and
 the queues of registered event from clients, the client library should keep
 a copy of these requests locally and send a set of reopen requests and
 potentially a lock acquire request to the new leader after it reconnects
 to the new leader after a leader change.
 
-However, it is not necessary to reconstruct the information of all the file
+Secondly, it is not necessary to reconstruct the information of all the file
 handlers held by clients eagerly. Instead, we reconstruct the file handler
 information in the normal case of the SimpleChubby processing after the
 leader change. If the new leader receives a request with a file handler that
