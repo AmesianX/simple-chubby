@@ -7,14 +7,12 @@ outstanding RPC is allowed between a client and the leader server.
 In addition, the client library needs to
 monitor event messages from the server and execute up-call
 to the user level.
-Since a user program might be blocked by such operations
+Since a user thread might be blocked by such operations
 as \texttt{acquire()}, events have to be delivered asynchronously
-to guarantee that events are delivered in time.
-
-The event subscription is necessary
-for the applications we implemented in Section~\ref{section:apps},
-because lock primitives can not notify a client about new events,
-such as leader change or content updated.
+to another thread to guarantee that events are handled in time.
+With event subscription, a client can avoid polling state changes
+at the server. This is necessary for the applications we implemented
+in Section~\ref{section:apps},
 
 Finally, when the leader server fails, the client library needs to figure out
 the new leader after server-side view change, and helps to recover some
