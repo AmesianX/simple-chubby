@@ -14,8 +14,7 @@
 using namespace std;
 using namespace xdr;
 
-Client::Client()
-  : fdList()
+Client::Client() : fdList()
 {
   client = NULL;
   nextFdId = 1;
@@ -42,7 +41,7 @@ void Client::close() {
       client->fileClose(kv.second);
     fdList.clear();
     nextFdId = 1;
-    
+
     delete client;
     client = NULL;
   }
@@ -68,9 +67,9 @@ Client::printFdList()
   cerr<<"fdList:"<<endl;
   for(auto& kv : fdList){
     auto fd = kv.second;
-    cerr<<"\t"<< kv.first 
-	<<" ("<<fd.file_name<<", "<<fd.instance_number
-	<<", "<<fd.magic_number<<")"<<endl;
+    cerr<<"\t"<< kv.first
+        <<" ("<<fd.file_name<<", "<<fd.instance_number
+        <<", "<<fd.magic_number<<")"<<endl;
   }
 }
 
@@ -85,56 +84,56 @@ Client::fileOpen(const std::string &file_name, Mode mode)
   if (r->discriminant() == 0) {
     // returned with a valid FD
     FileHandler fd = r->val();
-    uint64_t fdId = nextFdId++; 
+    uint64_t fdId = nextFdId++;
     fdList[fdId] = fd;
-    printFdList();
+    //printFdList();
     return fdId;
   }
   return FAIL; // return FAIL
 }
 
-void 
+void
 Client::fileClose(FileHandlerId fdId)
 {
-    FileHandler args;
+  FileHandler args;
 
-    auto it = fdList.find(fdId);
-    if(it != fdList.end()) {
-      args = it->second;
-      fdList.erase(it); 
-      // fileClose always suceeds
-      auto r = client->fileClose(args);
-    }
-    printFdList();
-    return;
+  auto it = fdList.find(fdId);
+  if(it != fdList.end()) {
+    args = it->second;
+    fdList.erase(it);
+    // fileClose always suceeds
+    auto r = client->fileClose(args);
+  }
+  //printFdList();
+  return;
 }
 
-bool 
+bool
 Client::fileDelete(FileHandlerId fdId)
 {
-    FileHandler args;
+  FileHandler args;
 
-    auto it = fdList.find(fdId);
-    if(it != fdList.end())
-      args = it->second;
-    else
-      throw ClientException(static_cast<ClientError>(BAD_ARG));
-    
-    auto r = client->fileDelete(args);
-    if (r->discriminant() == 1) {
-	// throw a proper exception
-	throw ClientException(static_cast<ClientError>(r->errCode()));
-    }
-    printFdList();
-    return r->val();
+  auto it = fdList.find(fdId);
+  if(it != fdList.end())
+    args = it->second;
+  else
+    throw ClientException(static_cast<ClientError>(BAD_ARG));
+
+  auto r = client->fileDelete(args);
+  if (r->discriminant() == 1) {
+    // throw a proper exception
+    throw ClientException(static_cast<ClientError>(r->errCode()));
+  }
+  //printFdList();
+  return r->val();
 }
 
-bool 
-Client::getContentsAndStat(FileHandlerId fdId, 
-			   FileContent *file_content, MetaData *meta_data)
+bool
+Client::getContentsAndStat(FileHandlerId fdId,
+                           FileContent *file_content, MetaData *meta_data)
 {
   FileHandler args;
-    
+
   auto it = fdList.find(fdId);
   if(it != fdList.end()) {
     args = it->second;
@@ -142,9 +141,9 @@ Client::getContentsAndStat(FileHandlerId fdId,
     if(r->discriminant() == 0) {
       // RPC returned normally
       if (file_content != nullptr)
-	*file_content = r->val().content;
+        *file_content = r->val().content;
       if (meta_data != nullptr)
-	*meta_data = r->val().stat;
+        *meta_data = r->val().stat;
       return true;
     } else
       throw ClientException(static_cast<ClientError>(r->errCode()));
@@ -152,7 +151,7 @@ Client::getContentsAndStat(FileHandlerId fdId,
   return false;
 }
 
-bool 
+bool
 Client::setContents(FileHandlerId fdId, const FileContent &file_content)
 {
   ArgSetContents args;
@@ -160,7 +159,7 @@ Client::setContents(FileHandlerId fdId, const FileContent &file_content)
   auto it = fdList.find(fdId);
   if(it != fdList.end()) {
     args.fd = it->second;
-    args.content = file_content;  
+    args.content = file_content;
     auto r = client->setContents(args);
     if(r->discriminant() == 0)
       return r->val();
@@ -170,14 +169,14 @@ Client::setContents(FileHandlerId fdId, const FileContent &file_content)
   return false;
 }
 
-void 
+void
 Client::acquire(FileHandlerId fdId)
 {
   FileHandler args;
 
   auto it = fdList.find(fdId);
   if(it != fdList.end()) {
-    args = it->second; 
+    args = it->second;
     auto r = client->acquire(args);
     if(r->discriminant() == 0){
       assert (r->val() == true);
@@ -188,14 +187,14 @@ Client::acquire(FileHandlerId fdId)
   }
 }
 
-bool 
+bool
 Client::tryAcquire(FileHandlerId fdId)
 {
   FileHandler args;
-    
+
   auto it = fdList.find(fdId);
   if(it != fdList.end()) {
-    args = it->second; 
+    args = it->second;
     auto r = client->tryAcquire(args);
     if(r->discriminant() == 0){
       return r->val();
@@ -205,7 +204,7 @@ Client::tryAcquire(FileHandlerId fdId)
   }
 }
 
-void 
+void
 Client::release(FileHandlerId fdId)
 {
   FileHandler args;
@@ -222,3 +221,14 @@ Client::release(FileHandlerId fdId)
       throw ClientException(static_cast<ClientError>(r->errCode()));
   }
 }
+
+void
+Client::register_callback(ChubbyEvent e, EventCallback cb) {
+  client->register_callback(e, cb);
+}
+
+void
+Client::delete_callback(ChubbyEvent e) {
+  client->delete_callback(e);
+}
+
