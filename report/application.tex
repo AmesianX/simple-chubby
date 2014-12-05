@@ -6,6 +6,13 @@ that the functionality is correct and the interface is easy to use.
 
 \subsection{Leader Election}
 
+\begin{figure*}
+\centering
+\includegraphics[width=0.8\textwidth]{leader_elect.pdf}
+\caption{Leader election workflow}
+\label{fig:leader_elect}
+\end{figure*}
+
 Leader election is an application that elects one out of a given group
 of clients as the leader. At any given time, at most one client among the
 group can be elected as the leader, and other clients should be able to
@@ -21,6 +28,13 @@ subscribe to the ``file content modified'' event to read out the new
 leader when changed.
 
 \subsection{Double Barrier}
+
+\begin{figure*}
+\centering
+\includegraphics[width=0.8\textwidth]{barrier.pdf}
+\caption{Barrier workflow}
+\label{fig:barrier}
+\end{figure*}
 
 Double barriers enable a given number of clients to synchronize at the
 beginning and the end of a computation region. When the number of processes
