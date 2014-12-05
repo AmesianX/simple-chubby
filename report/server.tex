@@ -1,6 +1,6 @@
-SimpleChubby server keeps two types of states. First, the
-leader server maintains in-memory data structures, which will be lost
-after a leader change. Second, the data need to be persistent are replicated
+The SimpleChubby leader server keeps two types of states,
+in-memory data structures that will be lost after a leader change,
+and persistent data that is replicated
 among leader and follower servers using the Viewstamp protocol.
 
 
