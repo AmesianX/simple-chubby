@@ -6,15 +6,14 @@ It is intended to help implement distributed synchronization.
 
 SimpleChubby exposes a simple Unix-like file system interface
 combined with locking primitives and event notifications.
-And we built three distributed synchronization applications, i.e.,
-leader election, group membership, and distributed barriers,
-with the interface to show its functionality.
+Leveraging such interface, we build three distributed synchronization
+applications, leader election, group membership, and distributed barriers.
 
 SimpleChubby uses a server-client architecture,
-and we put great effort to achieve fault tolerance
-which \cite{burrows2006chubby} does not provide many details on.
-Server fault tolerance is achieved by combining the Viewstamp protocol
-that we implement from scratch and a server-client cooperation mechanism
+and we put great efforts to achieve fault tolerance
+where \cite{burrows2006chubby} does not provide many details.
+Server fault tolerance is achieved by combining the Viewstamp protocol \cite{xxx}
+(that we implement from scratch) and a server-client cooperation mechanism
 to recover non-persistent server states.
 Server failure is transparent to users, and client failure
 is handled correctly by reclaiming its holding locks.
