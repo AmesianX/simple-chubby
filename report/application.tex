@@ -2,7 +2,7 @@ We implemented three example user applications using the SimpleChubby service,
 namely leader election, double barrier, and group membership.
 These applications use the API described in Section~\ref{section:api},
 and are able to survive both client and server failures. They demonstrate
-the correctness and efficiency of the SimpleChubby lock service.
+that the functionality is correct and the interface is easy to use.
 
 \subsection{Leader Election}
 
@@ -12,7 +12,7 @@ group can be elected as the leader, and other clients should be able to
 find out who is the leader, if it exists.
 
 We implement leader election as following: all clients open a single
-specified file and try to acquire its lock. The one who succeed becomes
+specified file and try to acquire its lock. The one who succeeds becomes
 the leader, and write its identity into the file. Others read the file
 to figure out who is the leader. The leader continues to hold the lock.
 Also, all clients subscribe to the ``lock state changed'' event, in order
@@ -29,7 +29,7 @@ start their computation, and leave the barrier together once they have all
 finished.
 
 In SimpleChubby, double barrier is implemented using two (single) barriers.
-We implement the barrier as follow: All clients open, lock, and update
+We implement the barrier as follow: all clients open, lock, and update
 one ``count'' file that store with the number of clients reaching the barrier.
 Then they wait until a ``file content modified'' event happens with another
 ``passed'' file. When the last client finds out that the required number
