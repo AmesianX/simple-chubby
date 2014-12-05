@@ -30,4 +30,8 @@ the client library needs to keep this information locally. When it connects
 to the new leader server, it needs to re-send the \texttt{acquire()} RPC,
 and tells the new leader all the events it subscribes.
 
+\subsection{Details about the client}
+To be simple, and avoid overwhelming the server, the client process will block until a remote procedure call is
+replied unless the leader server fails. That is, only one outstanding remote procedure call is allowed between
+a client and the leader server.
 
