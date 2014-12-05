@@ -81,7 +81,7 @@ right_line = 1
 plt.plot([right_line]*2,[bottom_line,top_line],'k',linewidth=6)
 
 DrawArrowBack(1.4, 0.2, 'tryAcquire', '', '')
-DrawArrowFront(1.7, 0.2, '', '', 'fail')
+DrawArrowFront(1.7, 0.2, '', '', '')
 DrawArrowFront(2.5, 0.2, 'event(file)', '', '')
 DrawArrowBack(3.0, 0.2, 'read: "leader"', '', '')
 DrawArrowFront(3.3, 0.2, '', '', '')
@@ -89,7 +89,7 @@ DrawArrowFront(3.3, 0.2, '', '', '')
 DrawArrowFront(5, 0.2, 'event(lock)', '', '')
 
 DrawArrowBack(5.5, 0.2, 'tryAcquire', '', '')
-DrawArrowFront(5.8, 0.2, '', '', 'suceed')
+DrawArrowFront(5.8, 0.2, '', '', '')
 
 DrawArrowBack(6.8, 0.2, 'write: "leader"', '', '')
 DrawArrowFront(7.1, 0.2, '', '', '')
