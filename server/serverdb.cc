@@ -138,7 +138,7 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 	    file_name.c_str());
   s.step();
   if(!s.row()) {
-    cout << " fails (node exits)."<<endl;
+    cout << " fails (node does not exit)."<<endl;
     return false;
   }
   
