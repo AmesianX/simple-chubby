@@ -1,8 +1,7 @@
-On the server side, SimpleChubby keeps two types of states. First, the
+SimpleChubby servers keeps two types of states. First, the
 leader server maintains in-memory data structures, which will be lost
 after a leader change. Second, the data need to be persistent are duplicated
 among leader and follower servers using a consensus.
-
 
 
 \subsubsection{In-Memory Data Structures}
@@ -21,8 +20,10 @@ be challenging, since queries for file handlers are frequent and the lengths
 of the opened file handler lists dynamically change. Therefore, we choose
 to keep this information in memory instead of in persistent store, in order
 to reduce the overhead of the Paxos protocol. In normal case, a file handler
-is create in fileOpen() and destoyed in either fileClose() or fileDelete().
-All requests from clients except fileOpen() take file handlers as arguments,
+is create in \texttt{fileOpen()} and destoyed in either \texttt{fileClose()}
+or \texttt{fileDelete()}.
+All requests from clients except \texttt{fileOpen()} take file handlers as
+arguments,
 and the server returns failures if the file handlers do not match with
 server's.
 
@@ -30,13 +31,13 @@ Another part of in-memory data structures is the queues of waiting lock acquire
 requests for different nodes. Upon any acquire() requests, the leader server
 adds the clients' session information into the queues and blocks the PRC
 if the locks are held by other clients.
-In a release() request, the server pops out a waiting session
+In a \texttt{release()} request, the server pops out a waiting session
 (if there are any) on the same lock, modifies the lock owner, and unblocks and
-returns the correspongding acquire() request.
+returns the correspongding \texttt{acquire()} request.
 
 We also store clients' request records for events in the leader server's memory.
 For each type of event, there are separate lists for different nodes.
-The client's session information will be added to the lists during fileOpen()
+The client's session information will be added to the lists during \texttt{fileOpen()}
 request if any event registration flags are asserted. Once a event happens,
 the server iterates through the list, and send the event to the client if the
 session is still alive. The list is then deleted.
@@ -49,7 +50,7 @@ The main part of persistent data is the Chubby file system. Each node has
 a full path name as the key, a string of content, the meta data defined
 in the SimpleChubby API, and a lock owner field. A normal node open returns
 the instance number of the node in order to form a file handler, while
-a node creation operation triggered by fileOpen() takes a unique ascending
+a node creation operation triggered by \texttt{fileOpen()} takes a unique ascending
 instance number from server and creates a node in the file system. All other
 operations on the filesystem (including operations that change lock owners)
 take both the name and the instance number of the node as arguments, and will
