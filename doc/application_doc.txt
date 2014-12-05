@@ -2,10 +2,10 @@ A skeleton of the two applications we will show.
 
 APPLICATION 1. Leader election.
 
-Leader election is an application that elects one host out of a given group
-of hosts as the leader. At any given time, at most one host among the
-group is elected as the leader, and other hosts in the group are able to
-find out which host is the leader, if it exists.
+Leader election is an application that elects one out of a given group
+of clients as the leader. At any given time, at most one client among the
+group can be elected as the leader, and other clients should be able to
+find out who is the leader, if it exists.
 
 In SimpleChubby, the application is implemented as follow:
 
@@ -26,14 +26,16 @@ side failure for this application.
 
 APPLICATION 2. Double barrier.
 
-Double barrier is a barrier that specifies a given number of hosts
-to proceed as a group. When the number of hosts that enter the barrier
-reaches the specified number, the same set of hosts will be allowed
-to leave the barrier.
+Double barriers enable a given number of clients to synchronize at the
+beginning and the end of a computation region. When the number of processes
+that have joined the barrier reaches the specified number, all processes
+start their computation, and leave the barrier together once they have all
+finished.
 
-In SimpleChubby, the application is implemented as follow:
+In SimpleChubby, double barrier is implemented using two normal barriers.
+The normal barrier is implemented as follow:
 
-They will be two files, 'passed' and 'in_barrier'.
+There will be two files, 'passed' and 'in_barrier'.
 The specified number of the barrier is noted as Q.
 
 1. Open the file 'in_barrier', and try to lock it.

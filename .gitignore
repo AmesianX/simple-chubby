@@ -14,3 +14,5 @@ shell/shell
 shell/shell.exe
 Makefile.local
 paxos/paxos_replica
+apps/leader_elect
+apps/double_barrier
