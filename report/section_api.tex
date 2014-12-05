@@ -1,12 +1,12 @@
 \section{User API and Semantics}
 \label{section:api}
 
-SimpleChubby provides an interface identical to the Chubby API~\cite{burrows2006chubby},
+SimpleChubby provides an interface similar to the Chubby API~\cite{burrows2006chubby},
 which exports a file system interface similar to, but simpler than that of UNIX.
 It consists of a strict tree of files and directories. Both files and directories
 are called \emph{nodes}. We support node creation and deletion, content
 read and write, lock operations, and event subscription.
-All the operations from all the clients are serialized at the server.
+All the operations from all the clients are serialized at the leader server.
 
 \begin{figure}
 \centering
@@ -16,10 +16,10 @@ All the operations from all the clients are serialized at the server.
     deletekeywords={delete},
     morekeywords={FileHandlerId, string, Mode, FileContent, MetaData, ChubbyEvent, EventCallback}]
 /* File and directory operations */
-FileHandlerId open(const string &fname,
+FileHandlerId fileOpen(const string &fname,
         Mode mode);
-void close(FileHandlerId fdId);
-bool delete(FileHandlerId fdId);
+void fileClose(FileHandlerId fdId);
+bool fileDelete(FileHandlerId fdId);
 
 /* Content read and write */
 bool getContentsAndStat(FileHandlerId fdId,
@@ -43,17 +43,21 @@ void deleteEvent(ChubbyEvent e);
 \end{figure}
 
 The full list of the API is shown in Figure~\ref{fig:api}.
-Applications use \texttt{Open()} to create a handler associated with a node
-handler, and the other functions all operate on the handler.
-We simplify the \texttt{Open()} interface by removing the parent handler and
-always specifying absolute path.
-The \texttt{mode} argument in the \texttt{Open()} function specifies the
-read/write mode. We also support create ephemeral nodes, which will be
-removed automatically when the connection fails.
+An applications calls \texttt{fileOpen()} to retrieve a file handler
+associated with an opened node. Similar to UNIX's implementation,
+this function returns an integer type of identifier for each file handler,
+which is used by all other functions in the API.
+We simplify the \texttt{fileOpen()} interface by removing the argument of
+the parent handler, and always specify an absolute path of a node.
+The \texttt{mode} argument in the \texttt{fileOpen()} consists of a set of flags,
+including \texttt{READ}/\texttt{WRITE} mode, and create \texttt{NEW\_DIRECTORY} flag.
+By asserting \texttt{EPHEMERAL} flag, a client can create ephemeral nodes,
+which will be automatically removed when the connection fails.
 
-The clients may also subscribe to a range of events, including ``file contents
-modified'' and ``lock state changed'', using the \texttt{mode} argument when
-opening files. The events are delivered to the clients asynchronously.
+Clients may also subscribe to a range of events during \texttt{fileOpen()},
+including ``file contents modified'' and ``lock state changed'',
+using the \texttt{mode} arguement.
+The events are delivered to the clients asynchronously.
 The event handler callback functions are supplied by user applications and
 registered beforehand, which will be called by the client library when
 corresponding events are received.
@@ -64,6 +68,6 @@ within a certain grace period, otherwise an exception will be exposed to
 the applications and all the locks it holds are assumed to be invalid.
 
 The user applications can use this API to perform various synchronization
-jobs. We provide two examples in Section~\ref{section:apps}.
+jobs. We provide three examples in Section~\ref{section:apps}.
 
 
