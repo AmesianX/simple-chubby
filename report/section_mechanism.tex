@@ -1,4 +1,6 @@
 \section{Fault Tolerance}
+\label{section:failure}
+
 \subsection{client failure}
 
 During a client failure, the leader server initiates release() operation for
@@ -11,15 +13,16 @@ events from the client.
 \subsection{server failover}
 
 When the leader server fails, the Paxos protocol elects a new leader. After
-the leader change, all persistent data remain consistent, while the in-memory
-data structures at the new leader need to be reconstructed. There are two
-methods for the reconstruction: clients' sending reopen PRCs intentionally,
-or clients' sending other normal PRCs with valid file handlers.
+the leader change, all persistent data remain consistent. However, the in-memory
+data structures at the new leader need to be reconstructed. The new leader
+does this partially by scanning the persistent data. The other missing data
+will be inferred from future client RPC requests.
 
 To precisely reconstruct the queues of outstanding lock acquire requests and
 the queues of registered event from clients, the client library should keep
 a copy of these requests locally and send a set of reopen requests and
-potentially a lock acquire request to the new leader during a leader change.
+potentially a lock acquire request to the new leader after it reconnects
+to the new leader after a leader change.
 
 However, it is not necessary to reconstruct the information of all the file
 handlers held by clients eagerly. Instead, we reconstruct the file handler
