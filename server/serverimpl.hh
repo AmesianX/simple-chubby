@@ -90,6 +90,8 @@ private:
 		     std::list<std::pair <xdr::SessionId, uint32_t> > > file2lockQueue_map;
   std::unordered_map<xdr::SessionId,
 		     std::unordered_set<std::string> > session2heldLock_map;
+  std::unordered_map<xdr::SessionId,
+		     std::unordered_set<std::string> > session2ephemeral_map;
   
   std::unordered_map<std::string, std::list<xdr::SessionId> > file2lockChange_map;
   std::unordered_map<std::string, std::list<xdr::SessionId> > file2contentChange_map;

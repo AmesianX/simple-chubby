@@ -63,10 +63,26 @@ api_v1_server::printFd()
   for (auto it = session2heldLock_map.begin();
        it != session2heldLock_map.end(); it++) {
     cout << "\t\t session: "<< it->first <<endl;
-    for (auto& s : it->second)
-      cout << "\t\t\t Locks: "<< s <<",";
-    cout << endl;
+    if (!it->second.empty()) {
+      cout << "\t\t\t locks: ";
+	for (auto& s : it->second)
+	  cout<< s <<", ";
+      cout << endl;
+    }
   }
+
+  cout << "\tsession2ephemeral_map:" <<endl;
+  for (auto it = session2ephemeral_map.begin();
+       it != session2ephemeral_map.end(); it++) {
+    cout << "\t\t session: "<< it->first <<endl;
+    if (!it->second.empty()) {
+      cout << "\t\t\t file: ";
+	for (auto& s : it->second)
+	  cout<< s <<", ";
+      cout << endl;
+    }
+  }
+
 }
 
 std::unique_ptr<int>
@@ -141,6 +157,8 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
       return res;
     }
     fd->instance_number = this->instance_number;
+    if (mode & EPHEMERAL)
+      session2ephemeral_map[session_id].insert(file_name);
   } else { // open an existing file or dir
     // check file is exist
     uint64_t instance_number;
@@ -202,12 +220,26 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   }
 
   // reclaim the locks if held
-  if( session2heldLock_map[session_id].count(fd->file_name) > 0 ) {
+  if( session2heldLock_map.count(session_id) > 0
+      && session2heldLock_map[session_id].count(fd->file_name) > 0 ) {
     std::unique_ptr<FileHandler> tmp_fd(new FileHandler);
     *tmp_fd = *fd;
     release(std::move(tmp_fd), session_id, (uint32_t) -1);
   }
-  
+
+  // delete the node if it is ephemeral
+  if( session2ephemeral_map[session_id].count(fd->file_name) > 0) {
+    std::unique_ptr<FileHandler> tmp_fd(new FileHandler);
+    *tmp_fd = *fd;
+    fileDelete(std::move(tmp_fd), session_id, (uint32_t) -1);
+
+    // return normally with TRUE value
+    res->discriminant(0);
+    res->val() = true;
+    printFd();
+    chubby_server_->reply(session_id, xid, std::move(res));
+    return res;
+  }
 
   // remove FD from <file, list of (session, FD) pairs> map
   file2fd_map[fd->file_name].remove({session_id, fd});
@@ -218,6 +250,7 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   session2fd_map[session_id].remove(fd);
   if(session2fd_map[session_id].empty())
     session2fd_map.erase(session_id);
+
 
   // clear lock queue
   if(file2lockQueue_map.count(fd->file_name) > 0) {
@@ -303,7 +336,14 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   // remove the list in file2fd_map
   int r = file2fd_map.erase(arg->file_name);
   assert(r == 1);
-  
+
+  // clear lock queue
+  file2lockQueue_map.erase(arg->file_name);
+
+  session2ephemeral_map[session_id].erase(fd->file_name);
+  if(session2ephemeral_map[session_id].empty())
+    session2ephemeral_map.erase(session_id);
+
   // return normally with TRUE value
   res->discriminant(0);
   res->val() = true;

@@ -62,8 +62,10 @@ dirContentDelete(const string &content, const string &node)
   std::string token;
   char delim = '|';
   while (std::getline(ss, token, delim)) {
+    if(token.empty())
+      continue;
     if(node.compare(token) != 0)
-      str.append(token);
+      str.append(std::string("|") + token);
   }
   return str;
 }
