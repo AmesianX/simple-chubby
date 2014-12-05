@@ -16,3 +16,4 @@ Makefile.local
 paxos/paxos_replica
 apps/leader_elect
 apps/double_barrier
+apps/group_membership
