@@ -5,26 +5,26 @@ similar to the original Google Chubby lock service\cite{burrows2006chubby}.
 It is intended to help implement distributed synchronization.
 
 SimpleChubby exposes a simple Unix-like file system interface
-combined with locking primitives and event notifications.
+combined with lock primitives and event notifications.
 Leveraging such interface, we build three distributed synchronization
-applications, leader election, group membership, and distributed barriers.
+applications, namely leader election, group membership, and distributed barriers.
 
 SimpleChubby uses a server-client architecture,
 and we put great efforts to achieve fault tolerance
 where \cite{burrows2006chubby} does not provide many details.
-Server fault tolerance is achieved by combining the Viewstamp protocol \cite{xxx}
-(that we implement from scratch) and a server-client cooperation mechanism
+Server fault tolerance is achieved by combining the Viewstamp protocol \cite{oki1988viewstamped}
+(which we implement from scratch) and a server-client cooperation mechanism
 to recover non-persistent server states.
 Server failure is transparent to users, and client failure
 is handled correctly by reclaiming its holding locks.
 
 In the following,
-SimpleChubby API and its semantics are described in section [??],
+SimpleChubby API and its semantics are described in section~\ref{section:api},
 the system architecture and normal-case processing mechanism
-are described in section [??],
-the fault tolerance mechanism is discussed in section ??,
-and in section ??, 
+are described in section~\ref{section:normal},
+the fault tolerance mechanism is discussed in section~\ref{section:fail},
+and in section~\ref{section:applications},
 three applications are shown to illustrate
-how SimpleChubby API is used to build 
+how SimpleChubby API is used to build
 distributed synchronization applications
 and give a detailed description about the system workflow.
