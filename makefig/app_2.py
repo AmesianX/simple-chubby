@@ -45,6 +45,7 @@ def DrawArrowBack(start_time, duration, name, start_event, end_event):
                      arrowprops=dict(arrowstyle="->",color="k",linestyle='dashed'))
 
 pp = PdfPages('app_2.pdf')
+fig = plt.figure(figsize=(7.5, 12))
 
 text_float = 0.1
 line_delta = 0.5
@@ -64,10 +65,11 @@ plt.plot([right_line]*2,[bottom_line,top_line],'k',linewidth=6)
 
 DrawArrowFront(1, 0.2, 'acquire', '', '')
 DrawArrowBack(1.3, 0.2, '', '', '')
+plt.annotate('get lock',xy=(left_line-0.3, top_line-0.05-1.5))
 DrawArrowFront(2, 0.2, 'read: count', '', '')
 DrawArrowBack(2.3, 0.2, '', '', '')
-plt.annotate('n=0',xy=(left_line-0.15, top_line-0.05-2.5))
-plt.annotate('n->1',xy=(left_line-0.15, top_line-0.05-3))
+plt.annotate('n=0',xy=(left_line-0.2, top_line-0.05-2.5))
+plt.annotate('n->1',xy=(left_line-0.22, top_line-0.05-3))
 DrawArrowFront(3, 0.2, 'write: count', '', '')
 plt.annotate('n=1',xy=(right_line+0.05, top_line-0.05-3.2))
 DrawArrowBack(3.3, 0.2, '', '', '')
@@ -83,6 +85,7 @@ plt.plot([right_line]*2,[bottom_line,top_line],'k',linewidth=6)
 
 DrawArrowBack(1.2, 0.2, 'acquire', '', '')
 DrawArrowFront(4.3, 0.2, '', '', '')
+plt.annotate('get lock',xy=(right_line+0.05, top_line-0.05-4.5))
 DrawArrowBack(5, 0.2, 'read: count', '', '')
 DrawArrowFront(5.3, 0.2, '', '', '')
 plt.annotate('n=1',xy=(right_line+0.05, top_line-0.05-5.5))
@@ -103,6 +106,8 @@ right_line = 1
 plt.xlim(left_line-text_width-left_right_margin,
          right_line+text_width+left_right_margin)
 plt.ylim(bottom_line, top_line+0.5)
+
+plt.tight_layout()
 #plt.show();
 
 pp.savefig()
