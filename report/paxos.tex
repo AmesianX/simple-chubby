@@ -1,13 +1,12 @@
-\section{Consensus protocol}
-
 SimpleChubby implements a replicated state machine to save the persistent
 state of SimpleChubby servers, i.e., file content and lock ownership,
 following the implementation described in \cite{mazieres2007paxos}.
-It is based on a Viewstamp consensus protocol\cite{oki1988viewstamped}, and its view-change is implemented using Paxos\cite{lamport2001paxos}.
+It is based on a Viewstamp consensus protocol\cite{oki1988viewstamped},
+and its view-change is implemented using Paxos\cite{lamport2001paxos}.
 
 The consensus implementation runs in the same process
 as the SimpleChubby server logic does.
-And the leader in a Viewstamp view is elected as the SimpleChubby leader server.
+And the leader in a Viewstamp view is appointed as the SimpleChubby leader server.
 
 Our consensus implementation targets at a correct consensus behavior
 rather than pushing hard for good performance.
@@ -21,28 +20,28 @@ To make our implementation simple,
 a replica loses all its data and states after rebooting,
 which increases the overhead of bringing up a reboot replica.
 
-\subsection{Implementation details}
-
-Servers communicate by remote procedure calls to achive consensus,
-and the calls use the same signatures as in \cite{mazieres2007paxos}.
-
-The implementation proposed in \cite{mazieres2007paxos} is pretty clear,
-except for the concurrency model. So more details are given here.
-In our implementation, there are three important threads running in a replica.
-
-The first thread periodically checks the communcation channel
-to the leader server.
-If the channel is down,
-a view change is initiated after a random timeout.
-The second thread responds to remote procedure calls from other replicas.
-It can perform such operations as replicating data,
-changing local view information,
-and modifying the local Paxos view change instance.
-The third thread replicates the data given by the SimpleChubby logic.
-
-The three threads are mostly asynchronized except when they access
-the local replica state. The local replica state includes but is not
-limited to
-whether the replica is ready to replica new data,
-which view the replica is in when it is ready,
-the Paxos instance states during a view change.
+%\subsection{Implementation details}
+%
+%Servers communicate by remote procedure calls to achive consensus,
+%and the calls use the same signatures as in \cite{mazieres2007paxos}.
+%
+%The implementation proposed in \cite{mazieres2007paxos} is pretty clear,
+%except for the concurrency model. So more details are given here.
+%In our implementation, there are three important threads running in a replica.
+%
+%The first thread periodically checks the communcation channel
+%to the leader server.
+%If the channel is down,
+%a view change is initiated after a random timeout.
+%The second thread responds to remote procedure calls from other replicas.
+%It can perform such operations as replicating data,
+%changing local view information,
+%and modifying the local Paxos view change instance.
+%The third thread replicates the data given by the SimpleChubby logic.
+%
+%The three threads are mostly asynchronized except when they access
+%the local replica state. The local replica state includes but is not
+%limited to
+%whether the replica is ready to replica new data,
+%which view the replica is in when it is ready,
+%the Paxos instance states during a view change.
