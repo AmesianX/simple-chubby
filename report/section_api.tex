@@ -1,12 +1,16 @@
-\section{User API and Semantics}
+\section{User API}
 \label{section:api}
 
-SimpleChubby provides an interface similar to the Chubby API~\cite{burrows2006chubby},
-which exports a file system interface similar to, but simpler than that of UNIX.
-It consists of a strict tree of files and directories. Both files and directories
-are called \emph{nodes}. We support node creation and deletion, content
-read and write, lock operations, and event subscription.
-All the operations from all the clients are serialized at the leader server.
+SimpleChubby user API consists of
+a file system interface for serialized file access and modification,
+a set of lock primitives,
+and an event subscription interface.
+%SimpleChubby provides an interface similar to the Chubby API~\cite{burrows2006chubby},
+%which exports a file system interface similar to, but simpler than that of UNIX.
+The underlying file system is organized similar to Unix,
+which consists of a strict tree of files and directories.
+Both files and directories are called \emph{nodes}.
+%All the operations from all the clients are serialized at the leader server.
 
 \begin{figure}
 \centering
@@ -62,10 +66,12 @@ The event handler callback functions are supplied and registered by user
 applications beforehand, and will be called by the client library when
 corresponding events are received.
 
-Our API supports a simplified failure model of Chubby. The server failures
+Our API supports a simplified failover model of Chubby. The server failures
 are transparent to user applications if the connection can be reconstructed
 within a certain grace period, otherwise an exception will be exposed to
 the applications and all the locks it holds are assumed to be invalid.
+If a client fails to connect to the leader server, its holding locks
+will be reclaimed after a certain timeout.
 
 The user applications can use this API to perform various synchronization
 jobs. We provide three examples in Section~\ref{section:apps}.
