@@ -1,31 +1,31 @@
 \section{Introduction}
 
 We implement a distributed lock service called SimpleChubby
-similiar to the original Google Chubby lock service\cite{burrows2006chubby}.
-It is intended to help implement distributed synchronization
-such as leader election, group membership, and distributed barriers.
+similar to the original Google Chubby lock service\cite{burrows2006chubby}.
+It is intended to help implement distributed synchronization.
 
 SimpleChubby exposes a simple Unix-like file system interface
-combined with locking primatives and event notifications.
-And we built three useful distributed synchronization applications with
-the interface to show its functionality.
+combined with locking primitives and event notifications.
+And we built three distributed synchronization applications, i.e.,
+leader election, group membership, and distributed barriers,
+with the interface to show its functionality.
 
 SimpleChubby uses a server-client architecture,
 and we put great effort to achieve fault tolerance
 which \cite{burrows2006chubby} does not provide many details on.
-Server fault tolerance is achieved by combining a Viewstamp protocol
+Server fault tolerance is achieved by combining the Viewstamp protocol
 that we implement from scratch and a server-client cooperation mechanism
 to recover non-persistent server states.
 Server failure is transparent to users, and client failure
 is handled correctly by reclaiming its holding locks.
 
 In the following,
-SimpleChubby API and its sematics are described in section [??],
+SimpleChubby API and its semantics are described in section [??],
 the system architecture and normal-case processing mechanism
 are described in section [??],
-the fault tolerance machenism is discussed in section ??,
+the fault tolerance mechanism is discussed in section ??,
 and in section ??, 
 three applications are shown to illustrate
 how SimpleChubby API is used to build 
-distributed sychronization applications
+distributed synchronization applications
 and give a detailed description about the system workflow.

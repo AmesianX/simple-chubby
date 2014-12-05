@@ -22,14 +22,14 @@ which increases the overhead of bringing up a reboot replica.
 
 %\subsection{Implementation details}
 %
-%Servers communicate by remote procedure calls to achive consensus,
+%Servers communicate by remote procedure calls to achieve consensus,
 %and the calls use the same signatures as in \cite{mazieres2007paxos}.
 %
 %The implementation proposed in \cite{mazieres2007paxos} is pretty clear,
 %except for the concurrency model. So more details are given here.
 %In our implementation, there are three important threads running in a replica.
 %
-%The first thread periodically checks the communcation channel
+%The first thread periodically checks the communication channel
 %to the leader server.
 %If the channel is down,
 %a view change is initiated after a random timeout.
