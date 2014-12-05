@@ -27,22 +27,22 @@ the leader change, all persistent data remain consistent. However, the in-memory
 data structures at the new leader need to be reconstructed. 
 
 Two methods are used for the reconstruction.
-First, a client eagerly sends some of its states to the new leader after the
-connection is established, which helps recover the in-memory structures of
+First, a client eagerly sends some of its states to the new leader after
+a new connection is established, which helps recover the in-memory structures of
 the leader, including the queues of outstanding lock acquire requests and
 the lists of event subscriptions from clients. In particular, the client library
-keeps a copy of subscribed events and its outstanding lock acquire request.
+keeps a copy of subscribed events and its outstanding lock acquire requests.
 After a leader change, a client connects to the new leader, sends
 reopen requests containing the previously subscription of events, and finally
 send an \texttt{acquire()} request if there is any outstanding request.
 On the other side, the leader accepts any reopen requests with valid file
-handlers, and add the event subscriptions to its in-memory data structure.
+handlers, and adds the event subscriptions to its in-memory data structure.
 
 However, the in-memory data structure of file handlers does not need to be
 reconstructed eagerly. The second method we use is to lazily recover the
 the file handler at the server side during the normal case of processing
 SimpleChubby requests.
 If the new leader receives a request with a file handler that
-missing in the leader's memory, it checks the signiture of the file
+is missing in the leader's memory, it checks the signiture of the file
 handler and initiates a reopen. If the reopen succeeds (i.e. the node exits
-and the meta data matches), the leader add this file handler into its memory.
+and the meta data matches), the leader adds this file handler into its memory.
