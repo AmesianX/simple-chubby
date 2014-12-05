@@ -18,6 +18,7 @@ class chubby_service_base_interface {
   ~chubby_service_base_interface() {}
   virtual void asynchronized_process(
       const rpc_msg &chdr, xdr_get &g, SessionId session_id, msg_sock* ms) = 0;
+  virtual void disconnect(SessionId session_id) = 0;
 };
 
 template<typename T> class chubby_service_base : public chubby_service_base_interface {
@@ -48,6 +49,11 @@ template<typename T> class chubby_service_base : public chubby_service_base_inte
       rhdr.body.rbody().areply().reply_data.stat(PROC_UNAVAIL);
       ms->putmsg(xdr_to_msg(rhdr));
     }
+  }
+
+  void disconnect(SessionId session_id)  override
+  {
+      server_.disconnect(session_id);
   }
 
   template<typename P> typename std::enable_if<
@@ -101,6 +107,8 @@ class chubby_server {
   void run();
   template<typename T> bool reply(SessionId session_id,
                                   uint32_t xid, std::unique_ptr<T> result) {
+    if (xid == (uint32_t) -1)
+      return false;
     rpc_msg rhdr;
     rhdr.xid = xid;
     rhdr.body.mtype(REPLY).rbody().stat(MSG_ACCEPTED)
@@ -146,6 +154,13 @@ class chubby_server {
     sessionid_to_fd_map_.erase(session_id);
     sessionid_to_msgsock_map_.erase(session_id);
     sessionid_to_clientid_map_.erase(session_id);
+
+    // iterate through all SERVERS_, then send disconnect()
+    //std::map<uint32_t, std::map<uint32_t, std::unique_ptr<chubby_service_base_interface>>> servers_;
+    for (auto & kv : servers_)
+      for (auto & s : kv.second)
+	(s.second)->disconnect(session_id);
+       
     std::cout << "Shut down Session #" << session_id << std::endl;
   }
  public:

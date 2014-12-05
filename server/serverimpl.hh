@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <random>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <list>
 #include <string>
@@ -24,12 +25,6 @@ struct SessionFdPair {
   }
 };
   
-
-struct RPCIdPair {
-  xdr::SessionId session;
-  uint32_t xid;
-};
-
 namespace xdr {
   class chubby_server;
 }  // namespace xdr
@@ -67,13 +62,16 @@ public:
 				      xdr::SessionId session_id, uint32_t xid);
   std::unique_ptr<RetBool> release(std::unique_ptr<FileHandler> arg,
 				   xdr::SessionId session_id, uint32_t xid);
-  
+
+  // for client and server failure handling
+  void disconnect(xdr::SessionId session_id);
+
   // for testing message
   std::unique_ptr<int> increment(std::unique_ptr<int> arg,
                                  xdr::SessionId session_id, uint32_t xid);
   std::unique_ptr<int> decrement(std::unique_ptr<int> arg,
                                  xdr::SessionId session_id, uint32_t xid);
-
+  
   
 private:
   FileHandler *findFd(xdr::SessionId client_id, const FileHandler &fd);
@@ -88,7 +86,10 @@ private:
   std::unordered_map<std::string, std::list<SessionFdPair> > file2fd_map;
   std::unordered_map<xdr::SessionId, std::list<FileHandler *> > session2fd_map;
   
-  std::unordered_map<std::string, std::list<RPCIdPair> > lock_queue_map;
+  std::unordered_map<std::string, 
+		     std::list<std::pair <xdr::SessionId, uint32_t> > > file2lockQueue_map;
+  std::unordered_map<xdr::SessionId,
+		     std::unordered_set<std::string> > session2heldLock_map;
   
   std::unordered_map<std::string, std::list<xdr::SessionId> > file2lockChange_map;
   std::unordered_map<std::string, std::list<xdr::SessionId> > file2contentChange_map;
