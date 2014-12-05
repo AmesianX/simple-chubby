@@ -1,11 +1,8 @@
-\section{Applications}
-\label{section:apps}
-
-We implemented two example user applications using the SimpleChubby service,
-namely leader election and double barrier. These applications use all the
-API categories described in Section~\ref{section:api}, and are able to
-survive both client failure and server failure. Thus, they demonstrate
-the correctness and efficiency of our lock service.
+We implemented three example user applications using the SimpleChubby service,
+namely leader election, double barrier, and group membership.
+These applications use the API described in Section~\ref{section:api},
+and are able to survive both client and server failures. They demonstrate
+the correctness and efficiency of the SimpleChubby lock service.
 
 \subsection{Leader Election}
 
@@ -18,10 +15,40 @@ We implement leader election as following: all clients open a single
 specified file and try to acquire its lock. The one who succeed becomes
 the leader, and write its identity into the file. Others read the file
 to figure out who is the leader. The leader continues to hold the lock.
-Also, all clients subscribe to the lock-change event, in order to compete
-for the new leader when the current leader dies. Clients also subscribe
-to the content-change event to read out the new leader when changed.
+Also, all clients subscribe to the ``lock state changed'' event, in order
+to compete for the new leader when the current leader dies. Clients also
+subscribe to the ``file content modified'' event to read out the new
+leader when changed.
 
 \subsection{Double Barrier}
+
+Double barriers enable a given number of clients to synchronize at the
+beginning and the end of a computation region. When the number of processes
+that have joined the barrier reaches the specified number, all processes
+start their computation, and leave the barrier together once they have all
+finished.
+
+In SimpleChubby, double barrier is implemented using two (single) barriers.
+We implement the barrier as follow: All clients open, lock, and update
+one ``count'' file that store with the number of clients reaching the barrier.
+Then they wait until a ``file content modified'' event happens with another
+``passed'' file. When the last client finds out that the required number
+achieves, it writes to the ``passed'' file to trigger the event, and cleans
+up the ``count'' file.
+
+\subsection{Group Membership}
+
+Group membership allows all the members inside a specific group to monitor
+the group membership changes, such as new member added, normal member leaving,
+or member failure.
+
+We implement this application using the directory feature in SimpleChubby.
+When entering the group, the member creates a ephemeral file in the group
+directory with the name of itself, and query the directory content to get
+the list of all members. The members also subscribe to the ``directory content
+modified'' event of the group directory, so that they can obtain the most
+up-to-date membership. When leaving the group, the member deletes its file.
+The ephemeral feather ensures the correctness even at failure.
+
 
 
