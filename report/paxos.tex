@@ -1,14 +1,14 @@
 SimpleChubby implements a replicated state machine to store the persistent
 state of SimpleChubby servers, i.e., file content, lock ownership and etc.,
-following the implementation described in \cite{mazieres2007paxos}.
-It is based on a Viewstamp consensus protocol\cite{oki1988viewstamped},
-and its view-change is implemented using Paxos\cite{lamport2001paxos}.
+following the implementation described in~\cite{mazieres2007paxos}.
+It is based on the Viewstamp protocol~\cite{oki1988viewstamped},
+and the view-change part is implemented using Paxos~\cite{lamport2001paxos}.
 
 The consensus implementation runs in the same process
-as the SimpleChubby server logic does.
-And the leader in a Viewstamp view is appointed as the SimpleChubby leader server.
+as the SimpleChubby server logic.
+The leader in a Viewstamp view is appointed as the SimpleChubby leader server.
 
-Our consensus implementation targets at a correct consensus behavior
+Our consensus implementation targets a correct consensus behavior
 rather than pushing hard for good performance.
 The implementation can reliably replicate data across replicas,
 achieve correct view change during server failures,
