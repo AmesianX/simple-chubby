@@ -6,13 +6,10 @@ outstanding RPC is allowed between a client and the leader server.
 
 In addition, to support event handling, the client library also needs to
 monitor the event message from the server and execute up-call
-to the user level.
-
-\textbf{Jing: the following para needs to be more clear}
-Some API functions, such as \texttt{acquire()}, can put
-the main thread into sleep. Also, event handling callback usually needs to
-be synchronized with the main thread. We guarantee that the user application
-and the event handling will not block each other.
+to the user level. Some API functions, such as \texttt{acquire()}, can put
+the application into sleep. Moreover, user applications sometimes explicitly
+wait for specific events to happen. Therefore we guarantee the events delivered to the
+clients will be handled in time regardless of the progress of the user application
 Also, a dedicated polling
 thread is used to poll the messages received from the server and deliver to
 user application or event handling thread depending on whether the message

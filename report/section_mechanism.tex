@@ -1,16 +1,26 @@
 \section{Fault Tolerance}
 \label{section:failure}
 
-\subsection{client failure}
+\subsection{Client Failure}
 
-During a client failure, the leader server initiates \texttt{release()} operation
-to reclaim all the locks previously held by the failed client. 
-The server also deletes all the file handlers opened by the client,
-any outstanding lock acquire requests sent by the client, and the
-event subscriptions from the client.
+During a client failure, the leader server releases all the locks
+previously held by the failed client after a certain timeout.
+This guarantees that locks are eventually released and no deadlock happens.
 
+For garbage collection
+purpose, the server also deletes all the file handlers opened by the client,
+outstanding lock acquire requests sent by the client, and all the registered
+events from the client.
 
-\subsection{server failover}
+Each client maintains a TCP connection with the leader server,
+which is called a session.
+The session is dead if either end shuts down the TCP connection.
+And the leader server will assume a client failure once the session is dead.
+Notice that this is a simplified implementation.
+If a client dies before explicitly shutting down the TCP connection,
+the client failure cannot be detected.
+
+\subsection{Server Failover}
 
 When the leader server fails, the Viewchange protocol elects a new leader. After
 the leader change, all persistent data remain consistent. However, the in-memory
