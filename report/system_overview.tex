@@ -17,24 +17,25 @@
 SimpleChubby implementation consists of a client library linked to user programs,
 and a server executable running on each server.
 When user code invokes the client library interfaces to access files or perform locking operations,
-the client library performs corresponding remote procedure calls to the leader server,
+the client library performs corresponding remote procedure calls (RPCs) to the leader server,
 waits for replies from the leader server, and returns the result back to the user.
 
 \subsubsection{Client side}
-The client library offers a set of interfaces for users to access SimpleChubby lock service,
-and talks with the leader server to implement the interfaces. 
+The client library offers a set of interfaces for users to access SimpleChubby
+lock service. It sends users' requests to the leader server through PRCs,
+and receives any events from the leader server.
+The client library also maintains a set of states, including opened file handlers,
+subscribed events, and outstanding lock acquire requests.
+In addition to sanity checks, it uses this information to help server failover.
+Once a older leader fails, the client library tries to connect to a new leader,
+and send its states which are necessary to reconstruct server's non-persistent
+states.
 
-User code does not talk with the leader server directly since the client library
-needs to know what requests are issued so that it can help a leader server
-to recover lost states during a server fail-over.
-Meanwhile, the client library can do certain sanity checks before sending requests
-to the leader server.
-
-The client library also cooperates with the servers to achieve server fail-over.  
-It tries to connect to a new leader server once the old one fails,
-and help the new server recover such lost states
-as open files, registered events, and lock waiting queues
-using client side information.
+%User code does not talk with the leader server directly since the client library
+%needs to know what requests are issued so that it can help a leader server
+%to recover lost states during a server fail-over.
+%Meanwhile, the client library can do certain sanity checks before sending requests
+%to the leader server.
 
 \subsubsection{Server side}
 
