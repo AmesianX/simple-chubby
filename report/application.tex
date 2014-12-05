@@ -9,7 +9,9 @@ that the functionality is correct and the interface is easy to use.
 \begin{figure*}
 \centering
 \includegraphics[width=0.8\textwidth]{leader_elect.pdf}
-\caption{Leader election workflow}
+\caption{Leader election. Two clients compete to be the leader. Client 0 wins,
+write itself into file ``leader'', but fails later. The server reclaims the
+lock and notifies client 1, which becomes the new leader after acquiring the lock.}
 \label{fig:leader_elect}
 \end{figure*}
 
@@ -18,7 +20,8 @@ of clients as the leader. At any given time, at most one client among the
 group can be elected as the leader, and other clients should be able to
 find out who is the leader, if it exists.
 
-We implement leader election as following: all clients open a single
+We implement leader election as shown in Figure~\ref{fig:leader_elect}:
+all clients open a single
 specified file and try to acquire its lock. The one who succeeds becomes
 the leader, and write its identity into the file. Others read the file
 to figure out who is the leader. The leader continues to hold the lock.
@@ -32,7 +35,10 @@ leader when changed.
 \begin{figure*}
 \centering
 \includegraphics[width=0.8\textwidth]{barrier.pdf}
-\caption{Barrier workflow}
+\caption{Barrier with two clients. Client 0 comes first and set the ``count'' file
+content to be 1. Client 1 comes later and set the ``count'' file content to be 2.
+Client 2 finds the requirement for the barrier achieves and writes to ``pass'' file,
+which ends the barrier by delivering events to all clients.}
 \label{fig:barrier}
 \end{figure*}
 
@@ -43,7 +49,7 @@ start their computation, and leave the barrier together once they have all
 finished.
 
 In SimpleChubby, double barrier is implemented using two (single) barriers.
-We implement the barrier as follow: all clients open, lock, and update
+We implement the barrier as shown in Figure~\ref{fig:barrier}: all clients open, lock, and update
 one ``count'' file that store with the number of clients reaching the barrier.
 Then they wait until a ``file content modified'' event happens with another
 ``passed'' file. When the last client finds out that the required number
