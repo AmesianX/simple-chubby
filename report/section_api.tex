@@ -1,1 +1,69 @@
-\section{API and sematics when failover}
+\section{User API and Semantics}
+\label{section:api}
+
+SimpleChubby provides an interface identical to the Chubby API~\cite{burrows2006chubby},
+which exports a file system interface similar to, but simpler than that of UNIX.
+It consists of a strict tree of files and directories. Both files and directories
+are called \emph{nodes}. We support node creation and deletion, content
+read and write, lock operations, and event subscription.
+All the operations from all the clients are serialized at the server.
+
+\begin{figure}
+\centering
+\begin{lstlisting}[language=C++,
+    basicstyle=\footnotesize\ttfamily,
+    commentstyle=\bfseries,
+    deletekeywords={delete},
+    morekeywords={FileHandlerId, string, Mode, FileContent, MetaData, ChubbyEvent, EventCallback}]
+/* File and directory operations */
+FileHandlerId open(const string &fname,
+        Mode mode);
+void close(FileHandlerId fdId);
+bool delete(FileHandlerId fdId);
+
+/* Content read and write */
+bool getContentsAndStat(FileHandlerId fdId,
+        FileContent *content,
+        MetaData *data);
+bool setContents(FileHandlerId fdId,
+        const FileContent &content);
+
+/* Lock operations */
+void acquire(FileHandlerId fdId);
+bool tryAcquire(FileHandlerId fdId);
+void release(FileHandlerId fdId);
+
+/* Event subscription */
+void registerEvent(ChubbyEvent e,
+        EventCallback cb);
+void deleteEvent(ChubbyEvent e);
+\end{lstlisting}
+\caption{SimpleChubby API}
+\label{fig:api}
+\end{figure}
+
+The full list of the API is shown in Figure~\ref{fig:api}.
+Applications use \texttt{Open()} to create a handler associated with a node
+handler, and the other functions all operate on the handler.
+We simplify the \texttt{Open()} interface by removing the parent handler and
+always specifying absolute path.
+The \texttt{mode} argument in the \texttt{Open()} function specifies the
+read/write mode. We also support create ephemeral nodes, which will be
+removed automatically when the connection fails.
+
+The clients may also subscribe to a range of events, including ``file contents
+modified'' and ``lock state changed'', using the \texttt{mode} argument when
+opening files. The events are delivered to the clients asynchronously.
+The event handler callback functions are supplied by user applications and
+registered beforehand, which will be called by the client library when
+corresponding events are received.
+
+Our API supports a simplified failure model of Chubby. The server failures
+are transparent to user applications if the connection can be reconstructed
+within a certain grace period, otherwise an exception will be exposed to
+the applications and all the locks it holds are assumed to be invalid.
+
+The user applications can use this API to perform various synchronization
+jobs. We provide two examples in Section~\ref{section:apps}.
+
+
