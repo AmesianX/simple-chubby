@@ -1,15 +1,19 @@
-The client library of SimpleChubby is mainly responsible for sending RPCs to the
-server, and returning the results to the user-level applications.
+The client library of SimpleChubby is responsible for sending RPCs to the
+leader server, and returning the results to the user-level applications.
 To avoid overwhelming the server, the client process will block until a RPC
-gets replied, unless the leader server fails. This implies that only one
+gets replied. This implies that only one
 outstanding RPC is allowed between a client and the leader server.
 
 In addition, to support event handling, the client library also needs to
-monitor the event message delivered from the server and execute up-call
-to the user level. Some API functions, such as \texttt{acquire()}, can put
+monitor the event message from the server and execute up-call
+to the user level.
+
+\textbf{Jing: the following para needs to be more clear}
+Some API functions, such as \texttt{acquire()}, can put
 the main thread into sleep. Also, event handling callback usually needs to
 be synchronized with the main thread. We guarantee that the user application
-and the event handling will not block each other. Also, a dedicated polling
+and the event handling will not block each other.
+Also, a dedicated polling
 thread is used to poll the messages received from the server and deliver to
 user application or event handling thread depending on whether the message
 is a RPC reply or an event. These features are necessary
@@ -17,7 +21,7 @@ for the applications we implemented in Section~\ref{section:apps}.
 
 Finally, when the leader server fails, the client library needs to figure out
 the new leader after server-side view change, and helps to recover some
-non-persistent state at the server side. We will talk about the details in
+non-persistent states at the server side. We will talk about the details in
 Section~\ref{section:failure}
 
 
