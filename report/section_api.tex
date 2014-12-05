@@ -43,7 +43,7 @@ void deleteEvent(ChubbyEvent e);
 \end{figure}
 
 The full list of the API is shown in Figure~\ref{fig:api}.
-An applications calls \texttt{fileOpen()} to retrieve a file handler
+An application calls \texttt{fileOpen()} to retrieve a file handler
 associated with an opened node. Similar to UNIX's implementation,
 this function returns an integer type of identifier for each file handler,
 which is used by all other functions in the API.
@@ -51,15 +51,15 @@ We simplify the \texttt{fileOpen()} interface by removing the argument of
 the parent handler, and always specify an absolute path of a node.
 The \texttt{mode} argument in the \texttt{fileOpen()} consists of a set of flags,
 including \texttt{READ}/\texttt{WRITE} mode, and create \texttt{NEW\_DIRECTORY} flag.
-By asserting \texttt{EPHEMERAL} flag, a client can create ephemeral nodes,
+By setting \texttt{EPHEMERAL} flag, a client can create ephemeral nodes,
 which will be automatically removed when the connection fails.
 
 Clients may also subscribe to a range of events during \texttt{fileOpen()},
 including ``file contents modified'' and ``lock state changed'',
 using the \texttt{mode} arguement.
 The events are delivered to the clients asynchronously.
-The event handler callback functions are supplied by user applications and
-registered beforehand, which will be called by the client library when
+The event handler callback functions are supplied and registered by user
+applications beforehand, and will be called by the client library when
 corresponding events are received.
 
 Our API supports a simplified failure model of Chubby. The server failures

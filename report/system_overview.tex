@@ -16,18 +16,18 @@
 
 SimpleChubby implementation consists of a client library linked to user programs,
 and a server executable running on each server.
-When user code invokes the client library interfaces to access files or perform locking operations,
-the client library performs corresponding remote procedure calls (RPCs) to the leader server,
-waits for replies from the leader server, and returns the result back to the user.
+When user code invokes the client library interfaces to access files or perform lock operations,
+the client library initializes corresponding remote procedure calls (RPCs) to the leader server,
+waits for replies, and returns the result back to the user.
 
 \paragraph{Client side.}
 The client library offers a set of interfaces for users to access SimpleChubby
-lock service. It sends users' requests to the leader server through PRCs,
+lock service. It sends user requests to the leader server through PRCs,
 and receives any events from the leader server.
 The client library also maintains a set of states, including opened file handlers,
 subscribed events, and outstanding lock acquire requests.
 In addition to sanity checks, it uses this information to help server failover.
-Once a older leader fails, the client library tries to connect to a new leader,
+Once an older leader fails, the client library tries to connect to a new leader,
 and send its states which are necessary to reconstruct server's non-persistent
 states.
 
@@ -54,8 +54,9 @@ The persistent states, including lock ownership and file system content,
 are replicated among replicas, and thus accesses or updates to them go
 through the consensus protocol.
 The rest of states are not replicated through the consensus protocol,
-and thus will be lost after a lead change.
+and thus will be lost after a leader change.
 
 SimpleChubby does not make all the leader server states persistent because
 of the overhead of the consensus protocol.
 Instead, non-persistent states can be recovered using client side information.
+We talk about the failover mechanism in Section~\ref{section:fail}.
