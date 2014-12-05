@@ -4,7 +4,7 @@ To avoid overwhelming the server, the client process will block until a RPC
 gets replied. This implies that only one
 outstanding RPC is allowed between a client and the leader server.
 
-In addition, to support event handling, the client library also needs to
+In addition, the client library needs to
 monitor the event message from the server and execute up-call
 to the user level. Some API functions, such as \texttt{acquire()}, can put
 the application into sleep. Moreover, user applications sometimes explicitly
