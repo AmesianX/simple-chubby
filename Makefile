@@ -27,7 +27,7 @@ include paxos/Makefile
 
 .PHONY: all clean xdrpp
 
-all: xdrpp paxos/paxos.hh include/server.hh libclient/libclient.a server/server shell/shell paxos/paxos_replica \
+all: xdrpp paxos/paxos.hh include/server.hh libclient/libclient.a server/server shell/shell paxos/paxos.a paxos/paxos_replica \
     apps/leader_elect apps/double_barrier apps/group_membership
 
 paxos/paxos.hh: paxos/paxos.x
@@ -51,6 +51,7 @@ clean:
 	rm -f shell/*.o
 	rm -f shell/shell
 	rm -f paxos/*.o
+	rm -f paxos/paxos.a
 	rm -f paxos/paxos_replica
 	! test -f xdrpp/Makefile || cd xdrpp && $(MAKE) clean
 
