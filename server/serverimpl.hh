@@ -61,10 +61,12 @@ public:
 				   xdr::SessionId session_id, uint32_t xid);
   std::unique_ptr<RetBool> fileReopen(std::unique_ptr<ArgReopen> arg,
 				   xdr::SessionId session_id, uint32_t xid);
+ 
 
 
   // for client and server failure handling
-  void disconnect(xdr::SessionId session_id);
+  void disconnect(xdr::SessionId session_id); 
+  void initializeLeader();
 
   // for testing message
   std::unique_ptr<int> increment(std::unique_ptr<int> arg,

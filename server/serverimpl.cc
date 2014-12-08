@@ -631,6 +631,10 @@ api_v1_server::disconnect(xdr::SessionId session_id)
   }
 }
 
+void api_v1_server::initializeLeader()
+{
+
+}
 
 
 /* Returns true is C is any letter, numbers, underscore, or slash. */

@@ -7,6 +7,8 @@
 #include <set>
 #include <string>
 #include <cstdint>
+#include <unordered_map>
+#include <unordered_set>
 #include "include/server.hh"
 
 class ServerDB {
@@ -94,7 +96,9 @@ public:
    */
   bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
 
-  
+  void getStates
+  (std::unordered_map<std::string, std::unordered_set<std::string> > &client2heldLock);
+
 private:
   // Helper functions
   void create(const char *file);
