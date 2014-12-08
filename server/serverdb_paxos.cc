@@ -86,6 +86,5 @@ bool ServerDBPaxos::resetLockOwner(
   return true;
 }
 void ServerDBPaxos::getStates(
-    std::unordered_map<std::string, std::unordered_set<std::string> > &
-    client2heldLock) {
+    std::vector<std::pair<std::string, std::string> > &client2heldLock) {
 }
