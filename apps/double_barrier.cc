@@ -64,7 +64,7 @@ public:
     if (fdId != FAIL) c->fileClose(fdId);
 
     // open files
-    checkErr((countfdId = c->fileOpen(fcount, READ | WRITE | EV_CONTENT_MODIFIED)) != FAIL,
+    checkErr((countfdId = c->fileOpen(fcount, READ | WRITE)) != FAIL,
              "open " + fcount + " fails!");
     checkErr((passedfdId = c->fileOpen(fpassed, READ | WRITE | EV_CONTENT_MODIFIED)) != FAIL,
              "open " + fpassed + " fails!");

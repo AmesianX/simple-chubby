@@ -193,24 +193,24 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
     if((mode & CREATE_DIRECTORY) || (mode & CREATE_FILE)) {
       bool is_dir = mode & CREATE_DIRECTORY;
       if(!db.checkAndCreate(file_name, is_dir, &(fd->instance_number)) ) {
-	// creation failed, then return false
-	delete fd;
-	res->discriminant(1);
-	res->errCode() = FS_FAIL;
-	chubby_server_->reply(session_id, xid, std::move(res));
-	return res;
+        // creation failed, then return false
+        delete fd;
+        res->discriminant(1);
+        res->errCode() = FS_FAIL;
+        chubby_server_->reply(session_id, xid, std::move(res));
+        return res;
       }
       if (mode & EPHEMERAL)
-	client2ephemeral_map[client_id].insert(file_name);
+        client2ephemeral_map[client_id].insert(file_name);
     } else { // open an existing file or dir
       // check file is exist
       if(!db.checkAndOpen(file_name, &(fd->instance_number))) {
-	// open failed, then return false
-	delete fd;
-	res->discriminant(1);
-	res->errCode() = FS_FAIL;
-	chubby_server_->reply(session_id, xid, std::move(res));
-	return res;      
+        // open failed, then return false
+        delete fd;
+        res->discriminant(1);
+        res->errCode() = FS_FAIL;
+        chubby_server_->reply(session_id, xid, std::move(res));
+        return res;      
       }
     }
   } catch (std::exception &e) {
@@ -759,7 +759,10 @@ api_v1_server::fileReopen(std::unique_ptr<ArgReopen> arg,
     file2lockChange_map[fd.file_name].push_back(session_id);
   if (mode & EV_CONTENT_MODIFIED)
     file2contentChange_map[fd.file_name].push_back(session_id);
-  
+  std::string client_id = session2client_map[session_id];
+  if (mode & EPHEMERAL)
+    client2ephemeral_map[client_id].insert(fd.file_name);
+
   res->discriminant(0);
   res->val() = true;
   chubby_server_->reply(session_id, xid, std::move(res));
@@ -870,7 +873,7 @@ api_v1_server::sendLockChangeEvent(const std::string &file_name)
     evc.fname = file_name;
     for (auto s : file2lockChange_map[file_name]) {
       chubby_server_->send<event_interface::event_callback_t> (s, evc);
-      cout << "sent LockChenge event to session "<< s<<endl;
+      cout << "sent LockChange event to session "<< s<<endl;
     }
   }
 }
@@ -884,7 +887,7 @@ api_v1_server::sendContentChangeEvent(const std::string &file_name)
     evc.fname = file_name;
     for (auto s : file2contentChange_map[file_name]) {
       chubby_server_->send<event_interface::event_callback_t> (s, evc);
-      cout << "sent LockChenge event to session "<< s<<endl;
+      cout << "sent ContentModified event to session "<< s<<endl;
     }
   }
 }
