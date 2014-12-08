@@ -10,7 +10,6 @@
 #include <xdrpp/srpc.h>
 #include <xdrpp/socket.h>
 
-#include "include/rpcconfig.h"
 #include "server/chubby_server.h"
 #include "server/serverdb_backstore.hh"
 #include "paxos/paxos_lib.hh"

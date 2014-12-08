@@ -7,7 +7,6 @@
 #include <server/chubby_client.h>
 #include <xdrpp/socket.h>
 
-#include <include/rpcconfig.h>
 #include <include/server.hh>
 #include <include/client.h>
 
