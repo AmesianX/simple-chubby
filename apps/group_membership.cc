@@ -94,18 +94,20 @@ int main(int argc, const char *argv[]) {
     renew(groupdir);
 
     string lastlist = "";
+    int dotPrinted = 0;
     while(run--) {
       string curlist;
       {
         lock_guard<mutex> lock(lk);
         curlist = grouplist;
       }
-      if (curlist == lastlist) {
+      if (curlist == lastlist && (dotPrinted % 20 != 0)) {
         std::cout << ".";
         std::cout.flush();
       } else {
         info("current membership is " + membership_parse(curlist));
       }
+      ++dotPrinted;
       lastlist = curlist;
       sleep(1);
     }
