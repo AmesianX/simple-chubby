@@ -8,7 +8,7 @@ PAXOS_SRC := paxos/paxos_impl.cc \
 
 PAXOS_HEADER := $(PAXOS_SRC:.cc=.hh) paxos/back_store.hh
 
-PAXOS_LIB := -Lpaxos `$(PKGCONFIG) --libs xdrpp` -ldl -lpaxos
+PAXOS_LIB := -Lpaxos -lpaxos `$(PKGCONFIG) --libs xdrpp` -ldl 
 
 PAXOS_OBJ := $(PAXOS_SRC:.cc=.o)
 
