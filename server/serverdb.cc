@@ -119,7 +119,7 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *in
 	  "VALUES (\"%s\", %d, %d);",
 	  file_name.c_str(), max_instance_num, is_dir);
   // update max_instance_number
-  sqlexec("UPDATE kvpairs SET value = %d WHERE name = \"max_instance_number\";",
+  sqlexec("UPDATE kvpairs SET value = %d WHERE key = \"max_instance_number\";",
 	  max_instance_num);
 
   // update the content field of parent dir
