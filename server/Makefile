@@ -21,7 +21,7 @@ scaffold: include/server.x xdrpp
 	$(XDRC) -servercc -o server/serverimpl.cc $<
 
 server/server: $(SERVER_OBJ)
-	$(LD) -o $@ $(LDFLAGS) $(SERVER_OBJ) $(LIBS)
+	$(LD) -o $@ $(LDFLAGS) $(SERVER_OBJ) $(LIBS) -Lpaxos -lpaxos
 
 # test serverdb
 server/serverdb: server/sqlite3.o server/sqlstmt.o server/serverdb.o

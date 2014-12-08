@@ -5,6 +5,8 @@
 #include <map>
 #include <xdrpp/server.h>
 
+class PaxosLib;
+
 namespace xdr {
 
 typedef uint32_t SessionId;
@@ -95,10 +97,11 @@ class chubby_server {
   void register_base_service(chubby_service_base_interface *s) {
     servers_[s->prog_][s->vers_].reset(s);
   }
+  PaxosLib* paxos_lib_;
 
  public:
-  chubby_server(unique_fd &&fd);
-  chubby_server() : chubby_server(unique_fd(-1)) {}
+  chubby_server(unique_fd &&fd, PaxosLib* paxos_lib);
+  //chubby_server() : chubby_server(unique_fd(-1)) {}
   virtual ~chubby_server();
   template<typename T> void register_service(T &t) {
     register_base_service(new chubby_service_base<T>(t));

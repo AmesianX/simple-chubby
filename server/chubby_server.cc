@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include "paxos/paxos_lib.hh"
 #include <server/chubby_server.h>
 
 namespace xdr {
@@ -33,8 +34,9 @@ rpc_mkerr(rpc_msg &m, reject_stat stat)
 }  // namespace
 
 // Setup the polling on the socket "fd". Callback is accept_cb.
-chubby_server::chubby_server(unique_fd &&fd)
-    : listen_fd_(fd ? std::move(fd) : tcp_listen()) {
+chubby_server::chubby_server(unique_fd &&fd, PaxosLib* paxos_lib)
+    : listen_fd_(fd ? std::move(fd) : tcp_listen()),
+      paxos_lib_(paxos_lib) {
   set_close_on_exec(listen_fd_.get());
   ps_.fd_cb(listen_fd_.get(), pollset::Read,
 	    std::bind(&chubby_server::accept_cb, this));
