@@ -85,6 +85,22 @@ api_v1_server::printFd()
 
 }
 
+std::string
+getParentName(const std::string &key)
+{
+  // find the lenth of the parent of KEY
+  int pos = key.length() - 1;
+  while (pos > 0) { /* if pos==0, the parent is root, 
+		       then break and return "/" */
+    if (key[pos] == '/') break;
+    --pos;
+  }
+  if (pos == 0)
+    return "/";
+  else 
+    return std::string(key, 0, pos);  // create a substring of key
+}
+
 std::unique_ptr<int>
 api_v1_server::increment(std::unique_ptr<int> arg,
                          xdr::SessionId session_id, uint32_t xid)
@@ -147,34 +163,31 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   // Create file or dir
   if((mode & CREATE_DIRECTORY) || (mode & CREATE_FILE)) {
     bool is_dir = mode & CREATE_DIRECTORY;
-    ++(this->instance_number);
-
-    if(!db.checkAndCreate(file_name, is_dir, this->instance_number)) {
+    if(!db.checkAndCreate(file_name, is_dir, &(fd->instance_number)) ) {
       // creation failed, then return false
       res->discriminant(1);
       res->errCode() = FS_FAIL;
       chubby_server_->reply(session_id, xid, std::move(res));
       return res;
     }
-    fd->instance_number = this->instance_number;
     if (mode & EPHEMERAL)
       session2ephemeral_map[session_id].insert(file_name);
   } else { // open an existing file or dir
     // check file is exist
-    uint64_t instance_number;
-    if(!db.checkAndOpen(file_name, &instance_number)) {
+    if(!db.checkAndOpen(file_name, &(fd->instance_number))) {
       // open failed, then return false
       res->discriminant(1);
       res->errCode() = FS_FAIL;
       chubby_server_->reply(session_id, xid, std::move(res));
       return res;      
     }
-    fd->instance_number = instance_number;
   }
-  fd->magic_number = this->rand_gen();
   fd->master_sequence_number = this->master_sequence_number;
   fd->file_name = file_name;
   fd->write_is_allowed = mode & WRITE;
+  fd->magic_number = str_hash(fd->file_name +
+			      std::to_string(fd->instance_number) +
+			      std::to_string(fd->write_is_allowed));  // use hash to sign
 
   // add FD to <file, list of (session, FD) pairs> 
   file2fd_map[file_name].push_back({session_id, fd});
@@ -194,7 +207,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   chubby_server_->reply(session_id, xid, std::move(res));
   
   // send content change events for parent node
-  std::string parent_name = db.getParentName(fd->file_name);
+  std::string parent_name = getParentName(fd->file_name);
   if (parent_name.compare("/") != 0 )
     sendContentChangeEvent(parent_name);
   return res;
@@ -353,7 +366,7 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   // send content change events for current node (event list deleted inside)
   sendContentChangeEvent(arg->file_name);
   // send content change events for parent node
-  std::string parent_name = db.getParentName(arg->file_name);
+  std::string parent_name = getParentName(arg->file_name);
   if (parent_name.compare("/") != 0 )
     sendContentChangeEvent(parent_name);
 
@@ -581,6 +594,29 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
   return res;
 }
 
+
+std::unique_ptr<RetBool>
+api_v1_server::startSession(std::unique_ptr<longstring> arg,
+			    xdr::SessionId session_id, uint32_t xid)
+{
+  std::unique_ptr<RetBool> res(new RetBool);
+  
+  // Fill in function body here
+  
+  return res;
+}
+
+std::unique_ptr<RetBool>
+api_v1_server::fileReopen(std::unique_ptr<ArgReopen> arg,
+			  xdr::SessionId session_id, uint32_t xid)
+{
+  std::unique_ptr<RetBool> res(new RetBool);
+  
+  // Fill in function body here
+  
+  return res;
+}
+
 /* This method is called by CHUBBY_SERVER_ when it detects a time-out session.
  * This method will effectively close all the file handlers of the session,
  * and reclaim all the locks owned by the session.*/
@@ -594,6 +630,12 @@ api_v1_server::disconnect(xdr::SessionId session_id)
     fileClose(std::move(arg), session_id, (uint32_t) -1);
   }
 }
+
+void api_v1_server::initializeLeader()
+{
+
+}
+
 
 /* Returns true is C is any letter, numbers, underscore, or slash. */
 inline bool

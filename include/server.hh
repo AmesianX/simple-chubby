@@ -125,6 +125,31 @@ template<> struct xdr_traits<::ArgOpen>
 };
 }
 
+struct ArgReopen {
+  FileHandler fd{};
+  Mode mode{};
+};
+namespace xdr {
+template<> struct xdr_traits<::ArgReopen>
+  : xdr_struct_base<field_ptr<::ArgReopen,
+                              decltype(::ArgReopen::fd),
+                              &::ArgReopen::fd>,
+                    field_ptr<::ArgReopen,
+                              decltype(::ArgReopen::mode),
+                              &::ArgReopen::mode>> {
+  template<typename Archive> static void
+  save(Archive &ar, const ::ArgReopen &obj) {
+    archive(ar, obj.fd, "fd");
+    archive(ar, obj.mode, "mode");
+  }
+  template<typename Archive> static void
+  load(Archive &ar, ::ArgReopen &obj) {
+    archive(ar, obj.fd, "fd");
+    archive(ar, obj.mode, "mode");
+  }
+};
+}
+
 struct ArgSetContents {
   FileHandler fd{};
   FileContent content{};
@@ -801,6 +826,50 @@ struct api_v1 {
     }
   };
 
+  struct startSession_t {
+    using interface_type = api_v1;
+    static constexpr std::uint32_t proc = 21;
+    static constexpr const char *proc_name = "startSession";
+    using arg_type = longstring;
+    using arg_wire_type = longstring;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
+    
+    template<typename C, typename...A> static auto
+    dispatch(C &&c, A &&...a) ->
+    decltype(c.startSession(std::forward<A>(a)...)) {
+      return c.startSession(std::forward<A>(a)...);
+    }
+    
+    template<typename C, typename DropIfVoid, typename...A> static auto
+    dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
+    decltype(c.startSession(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.startSession(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    }
+  };
+
+  struct fileReopen_t {
+    using interface_type = api_v1;
+    static constexpr std::uint32_t proc = 22;
+    static constexpr const char *proc_name = "fileReopen";
+    using arg_type = ArgReopen;
+    using arg_wire_type = ArgReopen;
+    using res_type = RetBool;
+    using res_wire_type = RetBool;
+    
+    template<typename C, typename...A> static auto
+    dispatch(C &&c, A &&...a) ->
+    decltype(c.fileReopen(std::forward<A>(a)...)) {
+      return c.fileReopen(std::forward<A>(a)...);
+    }
+    
+    template<typename C, typename DropIfVoid, typename...A> static auto
+    dispatch_dropvoid(C &&c, DropIfVoid &&d, A &&...a) ->
+    decltype(c.fileReopen(std::forward<DropIfVoid>(d), std::forward<A>(a)...)) {
+      return c.fileReopen(std::forward<DropIfVoid>(d), std::forward<A>(a)...);
+    }
+  };
+
   struct increment_t {
     using interface_type = api_v1;
     static constexpr std::uint32_t proc = 991;
@@ -872,6 +941,12 @@ struct api_v1 {
     case 8:
       t.template dispatch<release_t>(std::forward<A>(a)...);
       return true;
+    case 21:
+      t.template dispatch<startSession_t>(std::forward<A>(a)...);
+      return true;
+    case 22:
+      t.template dispatch<fileReopen_t>(std::forward<A>(a)...);
+      return true;
     case 991:
       t.template dispatch<increment_t>(std::forward<A>(a)...);
       return true;
@@ -931,6 +1006,18 @@ struct api_v1 {
     release(_XDRARGS &&..._xdr_args) ->
     decltype(this->_XDRBASE::template invoke<release_t>(_xdr_args...)) {
       return this->_XDRBASE::template invoke<release_t>(_xdr_args...);
+    }
+
+    template<typename..._XDRARGS> auto
+    startSession(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<startSession_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<startSession_t>(_xdr_args...);
+    }
+
+    template<typename..._XDRARGS> auto
+    fileReopen(_XDRARGS &&..._xdr_args) ->
+    decltype(this->_XDRBASE::template invoke<fileReopen_t>(_xdr_args...)) {
+      return this->_XDRBASE::template invoke<fileReopen_t>(_xdr_args...);
     }
 
     template<typename..._XDRARGS> auto

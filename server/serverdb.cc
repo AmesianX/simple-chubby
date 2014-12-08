@@ -70,12 +70,12 @@ dirContentDelete(const string &content, const string &node)
   return str;
 }
 
-bool
-ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number)
-{
-  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir
-      <<", "<<instance_number<<") ";
 
+bool
+ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *instance_number)
+{
+  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<") ";
+  // TODO implement instance_number
   // check if node exits
   SQLStmt node_q(db, "SELECT name FROM fs WHERE name = \"%s\"", file_name.c_str());
   if(node_q.step().row()) {
@@ -105,12 +105,23 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t ins
     parent_cn = par_q.integer(1);
   }
 
+  // get instance_number in db
+  SQLStmt kv_q(db, "SELECT value FROM kvpairs WHERE key = \"max_instance_number\"");
+  kv_q.step();
+  assert(kv_q.row());
+  uint64_t max_instance_num = kv_q.integer(0);
+  ++max_instance_num;
+
   // begins to create the file
   sqlexec("BEGIN;");
   // insert node
   sqlexec("INSERT INTO fs (name, instance_number, is_directory) "
 	  "VALUES (\"%s\", %d, %d);",
-	  file_name.c_str(), instance_number, is_dir);
+	  file_name.c_str(), max_instance_num, is_dir);
+  // update max_instance_number
+  sqlexec("UPDATE kvpairs SET value = %d WHERE name = \"max_instance_number\";",
+	  max_instance_num);
+
   // update the content field of parent dir
   if (parent_name.compare("/") != 0) {  // we don't maintain root node
     string new_parent_c = dirContentCreate(parent_content, file_name);
@@ -124,7 +135,9 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t ins
 	    new_checksum, parent_name.c_str());
   }
   sqlexec("COMMIT;");
-  cout<< " succeeds."<<endl;
+
+  *instance_number =  max_instance_num;
+  cout<< " succeeds. instance_number="<< *instance_number <<endl;
 
 
   return true;
@@ -133,7 +146,7 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t ins
 bool
 ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 {
-  cout<<"db: checkAndOpen("<<file_name<<", "<<instance_number<<") ";
+  cout<<"db: checkAndOpen("<<file_name<<") ";
 
   // check if node exits
   SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
@@ -372,6 +385,22 @@ ServerDB::resetLockOwner(const std::string &file_name, uint64_t instance_number)
   return true;
 }
 
+void 
+ServerDB::getStates
+(std::unordered_map<std::string, std::unordered_set<std::string> > &client2heldLock)
+{
+  
+  SQLStmt s(db, "SELECT name, lock_owner FROM fs");
+  s.step();
+  while(s.row()) {
+    std::string node = s.str(0);
+    std::string owner = s.str(1);
+    client2heldLock[node].insert(owner);
+    s.step();
+  }
+  return;
+}
+
 void
 ServerDB::create(const char *file)
 {
@@ -397,6 +426,11 @@ ServerDB::create(const char *file)
     ");";
   sqlexec("BEGIN;");
   sqlexec((string("CREATE TABLE fs ") + table_params).c_str());
+  //create table for storing instance_number
+  sqlexec("CREATE TABLE kvpairs"
+	  "(key TEXT PRIMARY KEY NOT NULL, value INT);");
+  sqlexec("INSERT INTO kvpairs (key, value) VALUES (\"max_instance_number\", 0);");
+
   sqlexec("COMMIT;");
 }
 

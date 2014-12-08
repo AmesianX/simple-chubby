@@ -7,6 +7,8 @@
 #include <set>
 #include <string>
 #include <cstdint>
+#include <unordered_map>
+#include <unordered_set>
 #include "include/server.hh"
 
 /*
@@ -32,10 +34,11 @@ public:
    * in the file's meta data. 
    * The creation fails if either the file/dir already exists or the parent
    * directory doesn't exist.
+   * Stores the instance_number of the node's meta data in INSTANCE_NUMBER.
    * 
    * Return Value: true if the creation succeeds, false otherwire.
    */
-  bool checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number);
+  bool checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *instance_number);
 
   /* 
    * Opens node named FILE_NAME after done checking.
@@ -97,14 +100,16 @@ public:
    */
   bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
 
-  
-  std::string getParentName(const std::string &key);
+  void getStates
+  (std::unordered_map<std::string, std::unordered_set<std::string> > &client2heldLock);
+
 private:
   // Helper functions
   void create(const char *file);
   void open(const char *file);
   void close();
   void sqlexec(const char *fmt, ...);
+  std::string getParentName(const std::string &key);
 
   sqlite3 *db;
   std::hash<std::string> str_hash;
