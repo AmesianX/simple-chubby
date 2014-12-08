@@ -635,9 +635,26 @@ api_v1_server::fileReopen(std::unique_ptr<ArgReopen> arg,
 			  xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
+  FileHandler fd = arg->fd;
+  Mode mode = arg->mode;
   
-  // Fill in function body here
+  // TODO check validality of FD
+  FileHandler *new_fd = new FileHandler();
+  *new_fd = fd;
+  // add FD to <file, list of (session, FD) pairs> 
+  file2fd_map[fd.file_name].push_back({session_id, new_fd});
+  // add FD to <session, list of FDs> map
+  session2fd_map[session_id].push_back(new_fd);
+
+  // register events
+  if (mode & EV_LOCK_CHANGED)
+    file2lockChange_map[fd.file_name].push_back(session_id);
+  if (mode & EV_CONTENT_MODIFIED)
+    file2contentChange_map[fd.file_name].push_back(session_id);
   
+  res->discriminant(0);
+  res->val() = true;
+  chubby_server_->reply(session_id, xid, std::move(res));
   return res;
 }
 
