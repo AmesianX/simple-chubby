@@ -1,7 +1,7 @@
 #include "paxos/paxos_lib.hh"
 #include "server/serverdb_paxos.hh"
 
-ServerDBPaxos::ServerDBPaxos(const char *file, PaxosLib* paxos_lib) {
+ServerDBPaxos::ServerDBPaxos(PaxosLib* paxos_lib) {
 }
 ServerDBPaxos::~ServerDBPaxos() {
 }

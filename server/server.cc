@@ -10,6 +10,7 @@
 
 #include "include/rpcconfig.h"
 #include "server/chubby_server.h"
+#include "server/serverdb_backstore.hh"
 #include "paxos/paxos_lib.hh"
 
 #include "serverimpl.hh"
@@ -28,7 +29,7 @@ int main(int argc, const char *argv[])
       return 1;
     }
 
-    BackStore back_store;
+    ServerdbBackstore back_store(std::stoi(argv[2]) + "chubbystore.db");
     PaxosLib paxos_lib(argv[1], std::stoi(argv[2]), &back_store);
     std::thread run_thread(std::bind(&PaxosLib::Run, &paxos_lib));
     run_thread.detach();

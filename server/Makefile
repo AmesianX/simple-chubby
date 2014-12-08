@@ -1,6 +1,8 @@
 
 SERVER_SRC := server/server.cc server/serverimpl.cc server/chubby_server.cc server/chubby_client.cc \
 			  server/serverdb.cc \
+			  server/serverdb_backstore.cc \
+			  server/serverdb_paxos.cc \
 			  server/sqlstmt.cc \
 			  server/sqlite3.c
 

@@ -9,9 +9,15 @@
 class PaxosLib;
 class MetaData;
 
+/*
+   A ServerDB that seems persistent to Chubby server logic, it runs paxos
+   underlying.
+   The interface is exactly the same as ServerDB.
+   */
+
 class ServerDBPaxos {
  public:
-  ServerDBPaxos(const char *file, PaxosLib* paxos_lib);
+  ServerDBPaxos(PaxosLib* paxos_lib);
   ~ServerDBPaxos();
   bool checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number);
   bool checkAndOpen(const std::string &file_name, uint64_t *instance_number);

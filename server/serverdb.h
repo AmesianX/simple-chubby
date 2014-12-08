@@ -9,6 +9,10 @@
 #include <cstdint>
 #include "include/server.hh"
 
+/*
+   The original backstore, which is replicated across Paxos replicas.
+ */
+
 class ServerDB {
 public:
   /*

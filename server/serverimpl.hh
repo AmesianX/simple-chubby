@@ -5,6 +5,7 @@
 #ifndef __XDR_SERVER_SERVERIMPL_HH_INCLUDED__
 #define __XDR_SERVER_SERVERIMPL_HH_INCLUDED__ 1
 
+#include "server/serverdb_paxos.hh"
 #include "include/server.hh"
 #include "include/event.hh"
 #include "serverdb.h"
@@ -37,7 +38,7 @@ public:
   using rpc_interface_type = api_v1;
 
   api_v1_server(xdr::chubby_server* server, PaxosLib* paxos_lib)
-    : chubby_server_(server), db("chubbystore.db"), rand_gen(1234),
+    : chubby_server_(server), db(paxos_lib), rand_gen(1234),
       paxos_lib_(paxos_lib)
   { 
     //TODO come from Paxos
@@ -83,7 +84,7 @@ private:
   void sendLockChangeEvent(const std::string &file_name);
   void sendContentChangeEvent(const std::string &file_name);
 
-  ServerDB db;
+  ServerDBPaxos db;
   uint64_t instance_number;
   uint64_t master_sequence_number;
   std::mt19937_64 rand_gen;
