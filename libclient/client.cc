@@ -24,14 +24,13 @@ Client::~Client() {
   this->close();
 }
 
-void Client::open(const std::string &host) {
+void Client::open(const std::string &host_file) {
   if (isConnected()) {
     cout << "Already connected!" << endl;
     exit(1);
   }
 
-  auto fd = tcp_connect(host.c_str(), UNIQUE_RPC_PORT);
-  client = new chubby_client_handler<api_v1>{fd.release()};
+  client = new chubby_client_handler<api_v1>(host_file);
 }
 
 void Client::close() {

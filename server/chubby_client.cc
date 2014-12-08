@@ -1,17 +1,50 @@
 #include "server/chubby_client.h"
+#include <iostream>
+#include <fstream>
+#include <unistd.h>
+#include <sys/time.h>
 #include <xdrpp/socket.h>
+#include <exception>
 
 namespace xdr {
 
-chubby_client::chubby_client(int fd) : fd_(fd)
-{
-  set_close_on_exec(fd_);
-  msg_sock *ms = new msg_sock(ps_, fd);
-  ms->setrcb(std::bind(&chubby_client::poll_recv_cb, this, ms,
-                       std::placeholders::_1));
+chubby_client::chubby_client(const std::string& server_addr_file) {
+  // use timestamp as the id
+  struct timeval tv;
+  gettimeofday(&tv, nullptr);
+  id_ = tv.tv_sec * 1000000 + tv.tv_usec;
+
+  // read in server config
+  std::ifstream ifs;
+  ifs.open(server_addr_file);
+  std::string line;
+  // skip first two lines
+  std::getline(ifs, line);
+  std::getline(ifs, line);
+  while(std::getline(ifs, line)) {
+    // skip server port for paxos
+    std::getline(ifs, line);
+    // use server port for client
+    if (!line.empty()) {
+      std::string::size_type colon_pos = line.find(":");
+      if (colon_pos == std::string::npos) continue;
+      server_addr_.emplace_back(line.substr(0, colon_pos), line.substr(colon_pos + 1));
+    }
+  }
+  ifs.close();
+
+  // try connect server
+  lk_acq_fd_bkup_ = nullptr;
+  event_bkup_.clear();
+  fd_ = -1;
+  connect_server_and_recover(true);
+
+  if (xdr_trace_client) {
+    std::clog << "Chubby client connected to server ..." << std::endl;
+  }
+
   pollth_ = std::thread(std::bind(&chubby_client::poll_loop, this));
   evcbth_ = std::thread(std::bind(&chubby_client::evcb_loop, this));
-  pollth_.detach();
   evcbth_.detach();
 }
 
@@ -25,6 +58,62 @@ chubby_client::chubby_client(chubby_client &&c) : fd_(c.fd_)
 
 chubby_client::~chubby_client() {
   ps_.fd_cb(fd_, pollset::Read);
+  pollth_.join();
+}
+
+void chubby_client::connect_server_and_recover(bool is_init) {
+
+  while (fd_ == -1) {
+    for (const auto& addr : server_addr_) {
+      try {
+        auto fd = tcp_connect(addr.host.c_str(), addr.service.c_str());
+        fd_ = fd.release();
+
+        set_close_on_exec(fd_);
+
+        // start session
+        auto clnt = new synchronous_client_base(fd_);
+        auto r = clnt->template invoke<api_v1::startSession_t>(std::to_string(id_));
+        delete clnt;
+
+        if (r->discriminant() == 0) {
+          if (r->val()) {
+            break;
+          }
+        }
+
+        close(fd_);
+        fd_ = -1;
+
+      } catch (std::exception& e) {
+        fd_ = -1;
+        sleep(1);
+      }
+    }
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(bkup_lk_);
+    for (auto& it : event_bkup_) {
+      ArgReopen arg;
+      arg.fd = std::get<0>(it);
+      arg.mode = std::get<1>(it);
+      auto clnt = new synchronous_client_base(fd_);
+      auto r = clnt->template invoke<api_v1::fileReopen_t>(arg);
+      delete clnt;
+      // ignore failure for reopen
+    }
+    {
+      std::lock_guard<std::mutex> lock(rlk_);
+      if (lk_acq_fd_bkup_ != nullptr) {
+        write_message(fd_, xdr_to_msg(hdr_bkup_, *lk_acq_fd_bkup_));
+      }
+    }
+  }
+
+  msg_sock *ms = new msg_sock(ps_, fd_);
+  ms->setrcb(std::bind(&chubby_client::poll_recv_cb, this, ms,
+                       std::placeholders::_1));
 }
 
 void chubby_client::poll_loop() {
@@ -89,6 +178,10 @@ void chubby_client::evcb_loop() {
 void chubby_client::poll_recv_cb(msg_sock *ms, msg_ptr mp) {
   if (!mp) {
     delete ms;
+
+    close(fd_);
+    fd_ = -1;
+    connect_server_and_recover();
     return;
   }
 
@@ -119,5 +212,41 @@ void chubby_client::poll_recv_cb(msg_sock *ms, msg_ptr mp) {
     ecv_.notify_one();
   }
 }
+
+template<>
+void chubby_client::store_bkup_before_call<api_v1::acquire_t>(const rpc_msg hdr,
+                                                              const FileHandler &a) {
+  std::lock_guard<std::mutex> lock(bkup_lk_);
+  lk_acq_fd_bkup_ = &a;
+  hdr_bkup_ = hdr;
+}
+template<>
+void chubby_client::store_bkup_after_call<api_v1::acquire_t>(const FileHandler &a,
+                                                             const std::unique_ptr<RetBool>& r) {
+  std::lock_guard<std::mutex> lock(bkup_lk_);
+  lk_acq_fd_bkup_ = nullptr;
+}
+
+template<>
+void chubby_client::store_bkup_after_call<api_v1::fileClose_t>(const FileHandler &a,
+                                                               const std::unique_ptr<RetBool>& r) {
+  std::lock_guard<std::mutex> lock(bkup_lk_);
+  auto it = event_bkup_.begin();
+  while (it != event_bkup_.end()) {
+    if (std::get<0>(*it).file_name == a.file_name) {
+      it = event_bkup_.erase(it);
+    }
+  }
+}
+
+template<>
+void chubby_client::store_bkup_after_call<api_v1::fileOpen_t>(const ArgOpen &a,
+                                                              const std::unique_ptr<RetFd>& r) {
+  if (r->discriminant() == 0) {
+    std::lock_guard<std::mutex> lock(bkup_lk_);
+    event_bkup_.push_back(std::make_pair(r->val(), a.mode));
+  }
+}
+
 
 }  // namespace xdr
