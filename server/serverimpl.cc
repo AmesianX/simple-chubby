@@ -164,28 +164,40 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   }
   
   FileHandler *fd = new FileHandler();
-  // Create file or dir
-  if((mode & CREATE_DIRECTORY) || (mode & CREATE_FILE)) {
-    bool is_dir = mode & CREATE_DIRECTORY;
-    if(!db.checkAndCreate(file_name, is_dir, &(fd->instance_number)) ) {
-      // creation failed, then return false
-      res->discriminant(1);
-      res->errCode() = FS_FAIL;
-      chubby_server_->reply(session_id, xid, std::move(res));
-      return res;
+  try {
+    // Create file or dir
+    if((mode & CREATE_DIRECTORY) || (mode & CREATE_FILE)) {
+      bool is_dir = mode & CREATE_DIRECTORY;
+      if(!db.checkAndCreate(file_name, is_dir, &(fd->instance_number)) ) {
+	// creation failed, then return false
+	delete fd;
+	res->discriminant(1);
+	res->errCode() = FS_FAIL;
+	chubby_server_->reply(session_id, xid, std::move(res));
+	return res;
+      }
+      if (mode & EPHEMERAL)
+	client2ephemeral_map[client_id].insert(file_name);
+    } else { // open an existing file or dir
+      // check file is exist
+      if(!db.checkAndOpen(file_name, &(fd->instance_number))) {
+	// open failed, then return false
+	delete fd;
+	res->discriminant(1);
+	res->errCode() = FS_FAIL;
+	chubby_server_->reply(session_id, xid, std::move(res));
+	return res;      
+      }
     }
-    if (mode & EPHEMERAL)
-      client2ephemeral_map[client_id].insert(file_name);
-  } else { // open an existing file or dir
-    // check file is exist
-    if(!db.checkAndOpen(file_name, &(fd->instance_number))) {
-      // open failed, then return false
-      res->discriminant(1);
-      res->errCode() = FS_FAIL;
-      chubby_server_->reply(session_id, xid, std::move(res));
-      return res;      
-    }
+  } catch (std::exception &e) {
+    delete fd;
+    std::cerr<<"\nfileOpen() catch an expection: "<<e.what()<<endl;
+    res->discriminant(1);
+    res->errCode() = PAXOS_ERROR;
+    chubby_server_->reply(session_id, xid, std::move(res));
+    return res;
   }
+
   fd->master_sequence_number = this->master_sequence_number;
   fd->file_name = file_name;
   fd->write_is_allowed = mode & WRITE;
@@ -251,7 +263,16 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   if( client2ephemeral_map[client_id].count(fd->file_name) > 0) {
     std::unique_ptr<FileHandler> tmp_fd(new FileHandler);
     *tmp_fd = *fd;
-    fileDelete(std::move(tmp_fd), session_id, (uint32_t) -1);
+
+    try {
+      fileDelete(std::move(tmp_fd), session_id, (uint32_t) -1);
+    } catch (std::exception &e) {
+      std::cerr<<"\nfileClose() catch an expection: "<<e.what()<<endl;
+      res->discriminant(1);
+      res->errCode() = PAXOS_ERROR;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      return res;
+    }
 
     // return normally with TRUE value
     res->discriminant(0);
@@ -334,13 +355,23 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
     return res;
   }
   
-  // try to delete in the database
-  if(!db.checkAndDelete(fd->file_name, fd->instance_number)) {
-    // Delete failed, return false
-    res->discriminant(0);
-    res->val() = false;
-    chubby_server_->reply(session_id, xid, std::move(res));
-    return res;
+  try {
+    // try to delete in the database
+    if(!db.checkAndDelete(fd->file_name, fd->instance_number)) {
+      // Delete failed, return false
+      res->discriminant(0);
+      res->val() = false;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      return res;
+    }
+  } catch (std::exception &e) {
+    std::cerr<<"\nfileDelete() catch an expection: "<<e.what()<<endl;
+    if (xid != (uint64_t) -1) {
+      res->discriminant(1);
+      res->errCode() = PAXOS_ERROR;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      return res;
+    } else throw e;
   }
 
   // remove all FDs in file2fd_map[fd->file_name]
@@ -404,11 +435,20 @@ api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg,
 
   std::string content;
   MetaData meta;
-  // try to read in the database
-  if(!db.checkAndRead(fd->file_name, fd->instance_number, &content, &meta)) {
-    // Read failed
+  
+  try {
+    // try to read in the database
+    if(!db.checkAndRead(fd->file_name, fd->instance_number, &content, &meta)) {
+      // Read failed
+      res->discriminant(1);
+      res->errCode() = FS_FAIL;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      return res;
+    }
+  } catch (std::exception &e) {
+    std::cerr<<"\ngetContentsAndStat() catch an expection: "<<e.what()<<endl;
     res->discriminant(1);
-    res->errCode() = FS_FAIL;
+    res->errCode() = PAXOS_ERROR;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
@@ -437,11 +477,19 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
     return res;
   }
 
-  // try to update in the database
-  if(!db.checkAndUpdate(fd->file_name, fd->instance_number, arg->content)) {
-    // Update failed
+  try {
+    // try to update in the database
+    if(!db.checkAndUpdate(fd->file_name, fd->instance_number, arg->content)) {
+      // Update failed
+      res->discriminant(1);
+      res->errCode() = FS_FAIL;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      return res;
+    }
+  } catch (std::exception &e) {
+    std::cerr<<"\nsetContents() catch an expection: "<<e.what()<<endl;
     res->discriminant(1);
-    res->errCode() = FS_FAIL;
+    res->errCode() = PAXOS_ERROR;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
@@ -479,18 +527,26 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
     return res;
   }
 
-  // try to set the lock_owner in the database
-  if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
-    // succeeded in DB, return true
-    assert(file2lockQueue_map.count(fd->file_name) == 0);
-    client2heldLock_map[client_id].insert(fd->file_name);
-    res->discriminant(0);
-    res->val() = true;
-    chubby_server_->reply(session_id, xid, std::move(res));
-    printFd();
+  try {
+    // try to set the lock_owner in the database
+    if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
+      // succeeded in DB, return true
+      assert(file2lockQueue_map.count(fd->file_name) == 0);
+      client2heldLock_map[client_id].insert(fd->file_name);
+      res->discriminant(0);
+      res->val() = true;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      printFd();
 
-    // send lock change events for current node
-    sendLockChangeEvent(fd->file_name);
+      // send lock change events for current node
+      sendLockChangeEvent(fd->file_name);
+      return res;
+    }
+  } catch (std::exception &e) {
+    std::cerr<<"\nacquire() catch an expection: "<<e.what()<<endl;
+    res->discriminant(1);
+    res->errCode() = PAXOS_ERROR;
+    chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
 
@@ -522,18 +578,26 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
     return res;
   }
 
-  // try to set the lock_owner in the database
-  if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
-    // succeeded in DB, return true
-    assert(file2lockQueue_map.count(fd->file_name) == 0);
-    client2heldLock_map[client_id].insert(fd->file_name);
-    res->discriminant(0);
-    res->val() = true;
-    chubby_server_->reply(session_id, xid, std::move(res));
-    printFd();
+  try {
+    // try to set the lock_owner in the database
+    if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
+      // succeeded in DB, return true
+      assert(file2lockQueue_map.count(fd->file_name) == 0);
+      client2heldLock_map[client_id].insert(fd->file_name);
+      res->discriminant(0);
+      res->val() = true;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      printFd();
 
-    // send lock change events for current node
-    sendLockChangeEvent(fd->file_name);
+      // send lock change events for current node
+      sendLockChangeEvent(fd->file_name);
+      return res;
+    }
+  } catch (std::exception &e) {
+    std::cerr<<"\ntryAcquire() catch an expection: "<<e.what()<<endl;
+    res->discriminant(1);
+    res->errCode() = PAXOS_ERROR;
+    chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
 
@@ -567,10 +631,19 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
     return res;
   }
 
-  if(!db.resetLockOwner(fd->file_name, fd->instance_number)) {
-    // reset failed
+  try {
+    // TODO use PAXOS only once
+    if(!db.resetLockOwner(fd->file_name, fd->instance_number)) {
+      // reset failed
+      res->discriminant(1);
+      res->errCode() = FS_FAIL;
+      chubby_server_->reply(session_id, xid, std::move(res));
+      return res;
+    }
+  } catch (std::exception &e) {
+    std::cerr<<"\nrelease() catch an expection: "<<e.what()<<endl;
     res->discriminant(1);
-    res->errCode() = FS_FAIL;
+    res->errCode() = PAXOS_ERROR;
     chubby_server_->reply(session_id, xid, std::move(res));
     return res;
   }
