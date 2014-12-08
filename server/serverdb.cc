@@ -70,12 +70,12 @@ dirContentDelete(const string &content, const string &node)
   return str;
 }
 
-bool
-ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number)
-{
-  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir
-      <<", "<<instance_number<<") ";
 
+bool
+ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *instance_number)
+{
+  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<") ";
+  // TODO implement instance_number
   // check if node exits
   SQLStmt node_q(db, "SELECT name FROM fs WHERE name = \"%s\"", file_name.c_str());
   if(node_q.step().row()) {
@@ -133,7 +133,7 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t ins
 bool
 ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 {
-  cout<<"db: checkAndOpen("<<file_name<<", "<<instance_number<<") ";
+  cout<<"db: checkAndOpen("<<file_name<<") ";
 
   // check if node exits
   SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",

@@ -26,6 +26,12 @@ struct ArgOpen {
     Mode mode;
 };
 
+struct ArgReopen {
+    FileHandler fd;
+    Mode mode;
+};
+
+
 struct ArgSetContents {
     FileHandler fd;
     FileContent content;
@@ -75,6 +81,9 @@ program server_api {
 	RetBool acquire(FileHandler) = 6;
 	RetBool tryAcquire(FileHandler) = 7;
 	RetBool release(FileHandler) = 8;
+
+	RetBool startSession(longstring) = 21;
+	RetBool fileReopen(ArgReopen) = 22;
 
 	int increment(int) = 991;
 	int decrement(int) = 992;

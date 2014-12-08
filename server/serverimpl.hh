@@ -35,12 +35,7 @@ public:
   using rpc_interface_type = api_v1;
 
   api_v1_server(xdr::chubby_server* server)
-    : chubby_server_(server), db("chubbystore.db"), rand_gen(1234)
-  { 
-    //TODO come from Paxos
-    instance_number = 0; 
-    master_sequence_number=0;
-  }
+    : chubby_server_(server), db("chubbystore.db")  { }
 
   ~api_v1_server() {}
 
@@ -62,6 +57,11 @@ public:
 				      xdr::SessionId session_id, uint32_t xid);
   std::unique_ptr<RetBool> release(std::unique_ptr<FileHandler> arg,
 				   xdr::SessionId session_id, uint32_t xid);
+  std::unique_ptr<RetBool> startSession(std::unique_ptr<longstring> arg,
+				   xdr::SessionId session_id, uint32_t xid);
+  std::unique_ptr<RetBool> fileReopen(std::unique_ptr<ArgReopen> arg,
+				   xdr::SessionId session_id, uint32_t xid);
+
 
   // for client and server failure handling
   void disconnect(xdr::SessionId session_id);
@@ -80,9 +80,11 @@ private:
   void sendContentChangeEvent(const std::string &file_name);
 
   ServerDB db;
-  uint64_t instance_number;
   uint64_t master_sequence_number;
-  std::mt19937_64 rand_gen;
+  std::hash<std::string> str_hash;
+  
+  std::unordered_map<std::string, std::string> session2client_map;
+
   std::unordered_map<std::string, std::list<SessionFdPair> > file2fd_map;
   std::unordered_map<xdr::SessionId, std::list<FileHandler *> > session2fd_map;
   
