@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
+#include "server/server_paxos.hh"
+
 
 class PaxosLib;
 class MetaData;
@@ -35,6 +37,8 @@ class ServerDBPaxos {
 
  private:
   PaxosLib* paxos_lib_;
+
+  ServerPaxosResult runPaxos(const ServerPaxosParam &param);
 };
 
 #endif /* __SERVER_SERVERDB_PAXOS_H__ */
