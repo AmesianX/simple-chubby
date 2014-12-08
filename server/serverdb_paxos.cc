@@ -1,12 +1,38 @@
+#include <exception>
+
+#include "paxos/helper.hh"
 #include "paxos/paxos_lib.hh"
 #include "server/serverdb_paxos.hh"
 
 ServerDBPaxos::ServerDBPaxos(PaxosLib* paxos_lib) {
+  paxos_lib_ = paxos_lib;
 }
 ServerDBPaxos::~ServerDBPaxos() {
 }
+//struct execute_arg {
+//  cid_t cid;
+//  uid_t rid;
+//  viewid_t vid;
+//  opaque request<>;
+//};
+//union execute_res switch (bool ok) {
+//  case TRUE:
+//    opaque reply<>;
+//  case FALSE:
+//    execute_viewinfo viewinfo;
+//};
 bool ServerDBPaxos::checkAndCreate(
     const std::string &file_name, bool is_dir, uint64_t instance_number) {
+  std::unique_ptr<execute_arg> arg(new execute_arg);
+  // arg->request.append((const unsigned char*)line.c_str(), line.size());
+  std::unique_ptr<execute_res> result =
+      paxos_lib_->paxos_interface_for_user->execute(std::move(arg));
+  if (result->ok()) {
+    std::cout << "Reply: " << OpaqueToString(result->reply()) << std::endl;
+  } else {
+    std::cout << "Not the leader." << std::endl;
+    throw std::runtime_error("Not the Paxos leader.");
+  }
   return true;
 }
 bool ServerDBPaxos::checkAndOpen(

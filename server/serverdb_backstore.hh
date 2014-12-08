@@ -11,8 +11,7 @@ class ServerdbBackstore : public BackStoreInterface {
   virtual void Initialize() override {
     assert(false);
   }
-  virtual std::string Run(const std::string input) override {
-  }
+  virtual std::string Run(const std::string input) override;
  private:
   ServerDB server_db;
 };  // class ServerdbBackstore.

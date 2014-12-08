@@ -31,6 +31,8 @@ class ServerDBPaxos {
   bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
   // TODO: can be deleted.
   std::string getParentName(const std::string &key);
+ private:
+  PaxosLib* paxos_lib_;
 };
 
 #endif /* __SERVER_SERVERDB_PAXOS_H__ */
