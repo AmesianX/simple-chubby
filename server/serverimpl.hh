@@ -16,6 +16,8 @@
 #include <list>
 #include <string>
 
+class PaxosLib;
+
 struct SessionFdPair {
   xdr::SessionId session;
   FileHandler *fd;
@@ -34,8 +36,9 @@ public:
   using event_interface = handler_v1;  // Interface for event.
   using rpc_interface_type = api_v1;
 
-  api_v1_server(xdr::chubby_server* server)
-    : chubby_server_(server), db("chubbystore.db"), rand_gen(1234)
+  api_v1_server(xdr::chubby_server* server, PaxosLib* paxos_lib)
+    : chubby_server_(server), db("chubbystore.db"), rand_gen(1234),
+      paxos_lib_(paxos_lib)
   { 
     //TODO come from Paxos
     instance_number = 0; 
@@ -74,6 +77,7 @@ public:
   
   
 private:
+  PaxosLib* paxos_lib_;
   FileHandler *findFd(xdr::SessionId client_id, const FileHandler &fd);
   void printFd();
   void sendLockChangeEvent(const std::string &file_name);

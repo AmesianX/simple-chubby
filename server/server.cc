@@ -27,6 +27,7 @@ int main(int argc, const char *argv[])
           << "replica_address; client_address ..." << std::endl;
       return 1;
     }
+
     BackStore back_store;
     PaxosLib paxos_lib(argv[1], std::stoi(argv[2]), &back_store);
     std::thread run_thread(std::bind(&PaxosLib::Run, &paxos_lib));
@@ -34,7 +35,7 @@ int main(int argc, const char *argv[])
 
     xdr::chubby_server chubby_server(tcp_listen(UNIQUE_RPC_PORT, AF_INET),
                                      &paxos_lib);
-    api_v1_server s(&chubby_server);
+    api_v1_server s(&chubby_server, &paxos_lib);
 
     try {
         chubby_server.register_service(s);
