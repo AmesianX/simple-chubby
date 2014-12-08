@@ -1,0 +1,3 @@
+How to run server:
+# ./server/server paxos/config.txt [rank_number]
+You'd better use rank=0 for single server.
