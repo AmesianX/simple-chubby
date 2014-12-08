@@ -193,3 +193,6 @@ void ServerDBPaxos::getStates(
   
   return;
 }
+bool ServerDBPaxos::isLeaderAndInitialized() {
+  return paxos_lib_->isLeaderAndInitialized();
+}

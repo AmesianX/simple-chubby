@@ -52,6 +52,7 @@ struct ReplicaState : public vc_state {
   // "view.view_id" : viewid_t.
   // The following access is thread-safe.
   bool isLeader;
+  bool isInitialized{false};
   net_address_t getReplicaAddress(int rank_id) const {
     return replica_address_[rank_id];
   }

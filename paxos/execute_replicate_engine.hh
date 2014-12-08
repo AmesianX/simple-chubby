@@ -3,6 +3,7 @@
 #include <cstdlib>
 
 #include "paxos/back_store.hh"
+#include "paxos/replica_state.hh"
 #include "paxos/paxos.hh"
 
 class ReplicaClientSet;
@@ -29,6 +30,9 @@ class ExecuteReplicateEngine {
   }
   void initializeLeader() {
     back_store_->Initialize();
+    replica_state_->BeginAccess();
+    replica_state_->isInitialized = true;
+    replica_state_->EndAccess();
   }
  private:
   ReplicaState* replica_state_;

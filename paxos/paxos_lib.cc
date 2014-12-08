@@ -110,3 +110,10 @@ void PaxosLib::Run() {
   paxos_server_thread.join();
 }
 
+bool PaxosLib::isLeaderAndInitialized() {
+  bool result;
+  assert(replica_state);
+  replica_state->BeginAccess();
+  result = replica_state->isLeader && replica_state->isInitialized;
+  replica_state->EndAccess();
+}

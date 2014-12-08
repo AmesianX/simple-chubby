@@ -34,6 +34,7 @@ class ServerDBPaxos {
 			   const std::string &client_id);
   bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
   void getStates(std::vector<std::pair<std::string, std::string> > &client2heldLock);
+  bool isLeaderAndInitialized();
 
  private:
   PaxosLib* paxos_lib_;

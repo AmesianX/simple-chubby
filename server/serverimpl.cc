@@ -721,7 +721,13 @@ api_v1_server::startSession(std::unique_ptr<longstring> arg,
   cout<<"\nserver: startSession: ("<< *arg << ", "<< session_id <<")"<<endl;
   
   try {
-    // TODO test itself whether it is a leader
+    // If not the leader.
+    if (!db.isLeaderAndInitialized()) {
+      res->discriminant(0);
+      res->val() = false;
+      return res;
+    }
+
     session2client_map[session_id] = *arg;
 
     res->discriminant(0);

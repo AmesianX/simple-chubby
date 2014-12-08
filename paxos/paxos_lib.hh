@@ -24,6 +24,7 @@ class PaxosLib {
   void Run();
   ~PaxosLib();
   paxos_client_v1_server* paxos_interface_for_user{};
+  bool isLeaderAndInitialized();
  private:
   void RunServer();
   BackStoreInterface* back_store{};
