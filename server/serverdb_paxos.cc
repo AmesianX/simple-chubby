@@ -36,20 +36,25 @@ bool ServerDBPaxos::checkAndCreate(
   // Serialize param to arg->request().
   xdr::msg_ptr serialized_param = xdr::xdr_to_msg(param);
   arg->request.append(
-      (const unsigned char*)serialized_param->raw_data(),
-      serialized_param->raw_size());
+      (const unsigned char*)serialized_param->data(),
+      serialized_param->size());
 
   // Call paxos.
   std::unique_ptr<execute_res> result =
       paxos_lib_->paxos_interface_for_user->execute(std::move(arg));
   if (result->ok()) {
     // Deserialize result->reply() to reply_result.
-    xdr::msg_ptr serialized_result = xdr::xdr_to_msg(result->reply());
+    xdr::msg_ptr serialized_result =
+        xdr::message_t::alloc(result->reply().size());
+    memcpy(serialized_result->data(), result->reply().data(),
+           result->reply().size());
     ServerPaxosResult reply_result;
     xdr_from_msg(serialized_result, reply_result);
     // Examine reply_result.
     *instance_number = reply_result.check_and_create_result().instance_number;
-    std::cout << "return." << *instance_number << std::endl;
+    std::cout << "return:" << *instance_number
+        << " " << reply_result.check_and_create_result().success
+        << std::endl;
     std::cout << "Paxos transaction succeeded." << std::endl;
     return reply_result.check_and_create_result().success;
   } else {
