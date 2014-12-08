@@ -119,7 +119,7 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *in
 	  "VALUES (\"%s\", %d, %d);",
 	  file_name.c_str(), max_instance_num, is_dir);
   // update max_instance_number
-  sqlexec("UPDATE kvpairs SET value = %d WHERE name = \"max_instance_number\";",
+  sqlexec("UPDATE kvpairs SET value = %d WHERE key = \"max_instance_number\";",
 	  max_instance_num);
 
   // update the content field of parent dir
@@ -262,13 +262,16 @@ ServerDB::checkAndRead(const std::string &file_name, uint64_t instance_number,
   if (node_instance_number != instance_number)
     return false;
 
-  *content = s.str(0);
-  meta->instance_number = node_instance_number;
-  meta->content_generation_number = s.integer(2);
-  meta->lock_generation_number = s.integer(3);
-  meta->file_content_checksum = s.integer(4);
-  meta->is_directory = s.integer(5);
-
+  if (content != nullptr)
+    *content = s.str(0);
+  if (meta != nullptr) {
+    meta->instance_number = node_instance_number;
+    meta->content_generation_number = s.integer(2);
+    meta->lock_generation_number = s.integer(3);
+    meta->file_content_checksum = s.integer(4);
+    meta->is_directory = s.integer(5);
+  }
+  
   return true;
 }
 
@@ -386,8 +389,7 @@ ServerDB::resetLockOwner(const std::string &file_name, uint64_t instance_number)
 }
 
 void 
-ServerDB::getStates
-(std::unordered_map<std::string, std::unordered_set<std::string> > &client2heldLock)
+ServerDB::getStates(std::vector<std::pair<std::string, std::string> > &client2heldLock)
 {
   
   SQLStmt s(db, "SELECT name, lock_owner FROM fs");
@@ -395,7 +397,7 @@ ServerDB::getStates
   while(s.row()) {
     std::string node = s.str(0);
     std::string owner = s.str(1);
-    client2heldLock[node].insert(owner);
+    client2heldLock.push_back({node, owner});
     s.step();
   }
   return;
