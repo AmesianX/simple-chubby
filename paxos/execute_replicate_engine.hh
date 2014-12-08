@@ -27,6 +27,9 @@ class ExecuteReplicateEngine {
     assert(back_store_);
     back_store_->Run(arg);
   }
+  void initializeLeader() {
+    back_store_->Initialize();
+  }
  private:
   ReplicaState* replica_state_;
   ReplicaClientSet* replica_client_set_;

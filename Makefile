@@ -54,7 +54,7 @@ clean:
 	rm -f shell/*.o
 	rm -f shell/shell
 	rm -f paxos/*.o
-	rm -f paxos/paxos.a
+	rm -f paxos/libpaxos.a
 	rm -f paxos/paxos_replica
 	! test -f xdrpp/Makefile || cd xdrpp && $(MAKE) clean
 

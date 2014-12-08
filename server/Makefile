@@ -22,7 +22,7 @@ scaffold: include/server.x xdrpp
 	$(XDRC) -serverhh -o server/serverimpl.hh $<
 	$(XDRC) -servercc -o server/serverimpl.cc $<
 
-server/server: $(SERVER_OBJ)
+server/server: $(SERVER_OBJ) paxos/libpaxos.a
 	$(LD) -o $@ $(LDFLAGS) $(SERVER_OBJ) $(LIBS) -Lpaxos -lpaxos
 
 # test serverdb

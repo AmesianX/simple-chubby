@@ -755,6 +755,7 @@ api_v1_server::disconnect(xdr::SessionId session_id)
 void
 api_v1_server::initializeLeader()
 {
+  std::cout << "InitializeLeader is called." << std::endl;
   session2client_map.clear();
   file2fd_map.clear();
   session2fd_map.clear();

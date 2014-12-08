@@ -102,6 +102,7 @@ void ChangeViewEngine::run() {
       replica_state_->EndAccess();
       if (becomeLeader) {
         execute_replicate_engine_->replicateCommand(command);
+        execute_replicate_engine_->initializeLeader();
       }
       continue;
     }

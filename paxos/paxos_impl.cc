@@ -75,6 +75,7 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
   command.newview = replica_state_->view;
   replica_state_->EndAccess();
   execute_replicate_engine_->replicateCommand(command);
+  execute_replicate_engine_->initializeLeader();
   res->succeed = true;
   return res;
 }

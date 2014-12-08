@@ -55,15 +55,18 @@ int main(int argc, const char *argv[])
     ServerdbBackstore back_store(
         (std::to_string(self_rank) + "chubbystore.db").c_str());
     PaxosLib paxos_lib(argv[1], self_rank, &back_store);
-    std::thread run_thread(std::bind(&PaxosLib::Run, &paxos_lib));
-    run_thread.detach();
-
     std::cout << "Chubby service started on port# " <<
         GetServicePort(argv[1], self_rank) << std::endl;
     xdr::chubby_server chubby_server(
         tcp_listen(GetServicePort(argv[1], self_rank).c_str(), AF_INET),
         &paxos_lib);
     api_v1_server s(&chubby_server, &paxos_lib);
+    back_store.RegisterInitializationCallback(
+        std::bind(&api_v1_server::initializeLeader, &s));
+
+    std::thread run_thread(std::bind(&PaxosLib::Run, &paxos_lib));
+    run_thread.detach();
+
 
     try {
         chubby_server.register_service(s);
