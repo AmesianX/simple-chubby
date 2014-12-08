@@ -620,11 +620,11 @@ api_v1_server::startSession(std::unique_ptr<longstring> arg,
     session2client_map[session_id] = *arg;
 
     res->discriminant(0);
-    res->val() = false;
+    res->val() = true;
   } catch (std::exception &e) {
     std::cerr<<"startSession catch an expection: "<<e.what()<<endl;
     res->discriminant(0);
-    res->val() = true;
+    res->val() = false;
   }
   chubby_server_->reply(session_id, xid, std::move(res));
   return res;
