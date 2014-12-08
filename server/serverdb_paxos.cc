@@ -71,7 +71,7 @@ bool ServerDBPaxos::checkAndCreate(
   std::cout << "return:" << *instance_number
 	    << " " << reply_result.check_and_create_result().success
 	    << std::endl;
-  return reply_result.check_and_open_result().success;
+  return reply_result.check_and_create_result().success;
 }
 
 bool ServerDBPaxos::checkAndOpen(
