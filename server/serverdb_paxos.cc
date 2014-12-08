@@ -38,8 +38,10 @@ ServerDBPaxos::runPaxos(const ServerPaxosParam &param)
       serialized_param->size());
 
   // Call paxos.
+  std::cout << "Before call paxos protocol." << std::endl;
   std::unique_ptr<execute_res> result =
       paxos_lib_->paxos_interface_for_user->execute(std::move(arg));
+  std::cout << "After call paxos protocol." << std::endl;
   if (result->ok()) {
     // Deserialize result->reply() to reply_result.
     xdr::msg_ptr serialized_result =
