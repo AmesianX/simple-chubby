@@ -116,4 +116,5 @@ bool PaxosLib::isLeaderAndInitialized() {
   replica_state->BeginAccess();
   result = replica_state->isLeader && replica_state->isInitialized;
   replica_state->EndAccess();
+  return result;
 }
