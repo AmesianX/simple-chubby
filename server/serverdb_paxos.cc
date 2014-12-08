@@ -22,7 +22,7 @@ ServerDBPaxos::~ServerDBPaxos() {
 //    execute_viewinfo viewinfo;
 //};
 bool ServerDBPaxos::checkAndCreate(
-    const std::string &file_name, bool is_dir, uint64_t instance_number) {
+    const std::string &file_name, bool is_dir, uint64_t *instance_number) {
   std::unique_ptr<execute_arg> arg(new execute_arg);
   // arg->request.append((const unsigned char*)line.c_str(), line.size());
   std::unique_ptr<execute_res> result =
@@ -63,7 +63,7 @@ bool ServerDBPaxos::resetLockOwner(
     const std::string &file_name, uint64_t instance_number) {
   return true;
 }
-// TODO: can be deleted.
-std::string ServerDBPaxos::getParentName(const std::string &key) {
-  return std::string();
+void ServerDBPaxos::getStates(
+    std::unordered_map<std::string, std::unordered_set<std::string> > &
+    client2heldLock) {
 }

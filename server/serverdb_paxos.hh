@@ -5,6 +5,8 @@
 #include <set>
 #include <string>
 #include <cstdint>
+#include <unordered_map>
+#include <unordered_set>
 
 class PaxosLib;
 class MetaData;
