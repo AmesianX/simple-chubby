@@ -32,6 +32,7 @@ std::string ServerdbBackstore::Run(const std::string input) {
       std::cout << "[paxos backstore] analyzed: " << file_name
           << " " << is_dir << std::endl;
       success = server_db.checkAndCreate(file_name, is_dir, &instance_number);
+      result.type(CHECK_AND_CREATE);
       result.check_and_create_result().instance_number = instance_number;
       result.check_and_create_result().success = success;
       break;
@@ -39,6 +40,7 @@ std::string ServerdbBackstore::Run(const std::string input) {
       file_name = param.check_and_open_param().file_name;
       std::cout << "[paxos backstore] analyzed: " << file_name << std::endl;
       success = server_db.checkAndOpen(file_name, &instance_number);
+      result.type(CHECK_AND_OPEN);
       result.check_and_open_result().instance_number = instance_number;
       result.check_and_open_result().success = success;
       break;
@@ -48,6 +50,7 @@ std::string ServerdbBackstore::Run(const std::string input) {
       std::cout << "[paxos backstore] analyzed: " << file_name << " "
           << instance_number <<std::endl;
       success = server_db.checkAndDelete(file_name, instance_number);
+      result.type(CHECK_AND_DELETE);
       result.check_and_delete_result().success = success;
       break;
     case CHECK_AND_READ:
@@ -57,6 +60,7 @@ std::string ServerdbBackstore::Run(const std::string input) {
           << instance_number <<std::endl;
       success = server_db.checkAndRead(
           file_name, instance_number, &content, &meta);
+      result.type(CHECK_AND_READ);
       result.check_and_read_result().success = success;
       result.check_and_read_result().content = content;
       result.check_and_read_result().meta.instance_number
@@ -78,6 +82,7 @@ std::string ServerdbBackstore::Run(const std::string input) {
           << instance_number <<std::endl;
       success = server_db.checkAndUpdate(
           file_name, instance_number, content);
+      result.type(CHECK_AND_UPDATE);
       result.check_and_update_result().success = success;
       break;
     case TEST_AND_SET_LOCK_OWNER:
@@ -88,6 +93,7 @@ std::string ServerdbBackstore::Run(const std::string input) {
           << instance_number << " " << client_id << std::endl;
       success = server_db.testAndSetLockOwner(
           file_name, instance_number, client_id);
+      result.type(TEST_AND_SET_LOCK_OWNER);
       result.test_and_set_lock_owner_result().success = success;
       break;
     case RESET_LOCK_OWNER:
@@ -97,6 +103,7 @@ std::string ServerdbBackstore::Run(const std::string input) {
           << instance_number <<std::endl;
       success = server_db.resetLockOwner(
           file_name, instance_number);
+      result.type(RESET_LOCK_OWNER);
       result.reset_lock_owner_result().success = success;
       break;
     case GET_STATES:
