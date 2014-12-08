@@ -58,7 +58,7 @@ chubby_client::chubby_client(chubby_client &&c) : fd_(c.fd_)
 
 chubby_client::~chubby_client() {
   ps_.fd_cb(fd_, pollset::Read);
-  pollth_.join();
+  pollth_.detach();
 }
 
 void chubby_client::connect_server_and_recover(bool is_init) {
@@ -235,6 +235,8 @@ void chubby_client::store_bkup_after_call<api_v1::fileClose_t>(const FileHandler
   while (it != event_bkup_.end()) {
     if (std::get<0>(*it).file_name == a.file_name) {
       it = event_bkup_.erase(it);
+    } else {
+      it++;
     }
   }
 }

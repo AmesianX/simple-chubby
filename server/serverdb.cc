@@ -389,7 +389,7 @@ ServerDB::resetLockOwner(const std::string &file_name, uint64_t instance_number)
 }
 
 void 
-ServerDB::getStates(std::vector<std::pair<std::string, std::string> > &client2heldLock)
+ServerDB::getStates(std::vector<std::pair<std::string, std::string> > &file_and_owner_list)
 {
   
   SQLStmt s(db, "SELECT name, lock_owner FROM fs");
@@ -397,7 +397,7 @@ ServerDB::getStates(std::vector<std::pair<std::string, std::string> > &client2he
   while(s.row()) {
     std::string node = s.str(0);
     std::string owner = s.str(1);
-    client2heldLock.push_back({node, owner});
+    file_and_owner_list.push_back({node, owner});
     s.step();
   }
   return;
