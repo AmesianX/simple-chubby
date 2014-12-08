@@ -61,7 +61,7 @@ public:
   /*
    * Connect to a server
    */
-  void open(const std::string &host);
+  void open(const std::string &host_file);
   /*
    * Disconnect from a server
    */
