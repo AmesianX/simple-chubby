@@ -38,10 +38,8 @@ ServerDBPaxos::runPaxos(const ServerPaxosParam &param)
       serialized_param->size());
 
   // Call paxos.
-  std::cout << "Before call paxos protocol." << std::endl;
   std::unique_ptr<execute_res> result =
       paxos_lib_->paxos_interface_for_user->execute(std::move(arg));
-  std::cout << "After call paxos protocol." << std::endl;
   if (result->ok()) {
     // Deserialize result->reply() to reply_result.
     xdr::msg_ptr serialized_result =
@@ -50,7 +48,9 @@ ServerDBPaxos::runPaxos(const ServerPaxosParam &param)
            result->reply().size());
     ServerPaxosResult reply_result;
     xdr_from_msg(serialized_result, reply_result);
-    std::cout << "Paxos transaction succeeded." << std::endl;
+    std::cout << "[PAXOS] Paxos transaction ("
+        << xdr::xdr_traits<CallType>::enum_name(CallType(param.type()))
+        << ") succeeded." << std::endl;
     return reply_result;
   } else {
     std::cout << "Paxos transaction failed." << std::endl;
@@ -70,9 +70,6 @@ bool ServerDBPaxos::checkAndCreate(
 
   // Examine reply_result.
   *instance_number = reply_result.check_and_create_result().instance_number;
-  std::cout << "return:" << *instance_number
-	    << " " << reply_result.check_and_create_result().success
-	    << std::endl;
   return reply_result.check_and_create_result().success;
 }
 
@@ -86,9 +83,6 @@ bool ServerDBPaxos::checkAndOpen(
 
   // Examine reply_result.
   *instance_number = reply_result.check_and_open_result().instance_number;
-  std::cout << "return:" << *instance_number
-	    << " " << reply_result.check_and_open_result().success
-	    << std::endl;
   return reply_result.check_and_open_result().success;
 }
 
@@ -102,8 +96,6 @@ bool ServerDBPaxos::checkAndDelete(
   ServerPaxosResult reply_result = runPaxos(param);
 
   // Examine reply_result.
-  std::cout << "return:" << reply_result.check_and_delete_result().success
-	    << std::endl;
   return reply_result.check_and_delete_result().success;
 }
 
@@ -125,9 +117,6 @@ bool ServerDBPaxos::checkAndRead(
   meta->file_content_checksum = reply_result.check_and_read_result().meta.file_content_checksum;
   meta->is_directory = reply_result.check_and_read_result().meta.is_directory;
 
-  std::cout << "return:" << *content
-	    << " " << reply_result.check_and_read_result().success
-	    << std::endl;
   return reply_result.check_and_read_result().success;
 }
 bool ServerDBPaxos::checkAndUpdate(
@@ -142,8 +131,6 @@ bool ServerDBPaxos::checkAndUpdate(
   ServerPaxosResult reply_result = runPaxos(param);
 
   // Examine reply_result.
-  std::cout << "return:" << reply_result.check_and_update_result().success
-	    << std::endl;
   return reply_result.check_and_update_result().success;
 }
 bool ServerDBPaxos::testAndSetLockOwner(
@@ -158,8 +145,6 @@ bool ServerDBPaxos::testAndSetLockOwner(
   ServerPaxosResult reply_result = runPaxos(param);
 
   // Examine reply_result.
-  std::cout << "return:" << reply_result.test_and_set_lock_owner_result().success
-	    << std::endl;
   return reply_result.test_and_set_lock_owner_result().success;
 return true;
 }
@@ -173,8 +158,6 @@ bool ServerDBPaxos::resetLockOwner(
   ServerPaxosResult reply_result = runPaxos(param);
 
   // Examine reply_result.
-  std::cout << "return:" << reply_result.reset_lock_owner_result().success
-	    << std::endl;
   return reply_result.reset_lock_owner_result().success;
 return true;
 }
@@ -188,8 +171,6 @@ void ServerDBPaxos::getStates(
   auto list = reply_result.get_states_result().list;
   for(auto & e : list)
     client2heldLock.push_back({e.key, e.value});
-  std::cout << "return: size of the returned list = " << list.size()
-	    << std::endl;
   
   return;
 }

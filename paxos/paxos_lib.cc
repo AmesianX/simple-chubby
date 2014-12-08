@@ -83,7 +83,7 @@ void PaxosLib::RunServer() {
   std::string port = analyzeNetworkPort(self_replica_address);
   paxos_listener = new xdr::rpc_tcp_listener(
       xdr::tcp_listen(port.c_str(), AF_INET));
-  printf("Paxos inter-replica channel: listening on port#%s.\n", port.c_str());
+  printf("[PAXOS] Inter-replica channel is listening on port#%s.\n", port.c_str());
   try {
     paxos_listener->register_service(*paxos_server);
     paxos_listener->run();

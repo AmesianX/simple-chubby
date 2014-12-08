@@ -19,7 +19,7 @@ paxos_v1_server::replicate(std::unique_ptr<replicate_arg> arg)
     memcpy(message->raw_data(), arg->arg.request.data(), arg->arg.request.size());
     xdr_from_msg(message, request);
     replica_state_->BeginAccess();
-    printf("New leader promoted: rank#%d\n",
+    printf("[PAXOS] New leader promoted: rank#%d\n",
            replica_state_->getClientUseAddressRank(request.newview.primary.addr));
     replica_state_->isLeader = false;
     replica_state_->view = request.newview;
@@ -61,7 +61,7 @@ paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
     res->succeed = false;
     return res;
   }
-  printf("Promoted to Paxos leader, rank#%d.\n",
+  printf("[PAXOS] Promoted to Paxos leader, rank#%d.\n",
          replica_state_->getSelfRank());
   replica_state_->isLeader = true;
   int rank = replica_state_->getSelfRank();
