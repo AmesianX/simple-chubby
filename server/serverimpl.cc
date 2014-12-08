@@ -142,6 +142,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   std::string file_name = arg->name;
   Mode mode = arg->mode;
   //std::string client_id = session2client_map[session_id]; 
+  // TODO(for debug only).
   std::string client_id = "pujing";
   //assert(!client_id.empty());
 
