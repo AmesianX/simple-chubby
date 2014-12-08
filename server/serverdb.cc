@@ -262,13 +262,16 @@ ServerDB::checkAndRead(const std::string &file_name, uint64_t instance_number,
   if (node_instance_number != instance_number)
     return false;
 
-  *content = s.str(0);
-  meta->instance_number = node_instance_number;
-  meta->content_generation_number = s.integer(2);
-  meta->lock_generation_number = s.integer(3);
-  meta->file_content_checksum = s.integer(4);
-  meta->is_directory = s.integer(5);
-
+  if (content != nullptr)
+    *content = s.str(0);
+  if (meta != nullptr) {
+    meta->instance_number = node_instance_number;
+    meta->content_generation_number = s.integer(2);
+    meta->lock_generation_number = s.integer(3);
+    meta->file_content_checksum = s.integer(4);
+    meta->is_directory = s.integer(5);
+  }
+  
   return true;
 }
 

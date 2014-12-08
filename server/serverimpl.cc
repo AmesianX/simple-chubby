@@ -20,7 +20,8 @@ const uint64_t EV_CONTENT_MODIFIED = 0x200;
 
 enum ClientError {
   BAD_ARG,
-  FS_FAIL
+  FS_FAIL,
+  PAXOS_ERROR
 };
 
 using std::cout;
@@ -621,9 +622,9 @@ api_v1_server::startSession(std::unique_ptr<longstring> arg,
     res->discriminant(0);
     res->val() = false;
   } catch (std::exception &e) {
-    std::cerr<<"startSession catch an expection:"<<e.what()<<endl;
+    std::cerr<<"startSession catch an expection: "<<e.what()<<endl;
     res->discriminant(0);
-    res->val() = false;
+    res->val() = true;
   }
   chubby_server_->reply(session_id, xid, std::move(res));
   return res;
@@ -712,11 +713,6 @@ api_v1_server::findFd(xdr::SessionId session_id, const FileHandler &fd)
     
   for(auto it = l.begin(); it != l.end(); ++it) {
     FileHandler *p = *it;
-    /*
-    cout << "findFd: "<< p->instance_number
-	 << p->magic_number << p->master_sequence_number
-	 << p->file_name << p->write_is_allowed<<endl;
-    */
     if (p->instance_number == fd.instance_number &&
 	p->magic_number == fd.magic_number &&
 	p->master_sequence_number == fd.master_sequence_number &&
@@ -724,6 +720,15 @@ api_v1_server::findFd(xdr::SessionId session_id, const FileHandler &fd)
 	p->write_is_allowed == fd.write_is_allowed)
       return p;
   }
+  // TODO check validality of FD
+  FileHandler *new_fd = new FileHandler();
+  *new_fd = fd;
+  // add FD to <file, list of (session, FD) pairs> 
+  file2fd_map[fd.file_name].push_back({session_id, new_fd});
+  // add FD to <session, list of FDs> map
+  session2fd_map[session_id].push_back(new_fd);
+  return new_fd;
+
   // return nullptr if no match found
   return nullptr;
 }
