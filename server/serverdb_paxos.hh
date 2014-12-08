@@ -19,7 +19,7 @@ class ServerDBPaxos {
  public:
   ServerDBPaxos(PaxosLib* paxos_lib);
   ~ServerDBPaxos();
-  bool checkAndCreate(const std::string &file_name, bool is_dir, uint64_t instance_number);
+  bool checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *instance_number);
   bool checkAndOpen(const std::string &file_name, uint64_t *instance_number);
   bool checkAndDelete(const std::string &file_name, uint64_t instance_number);
   bool checkAndRead(const std::string &file_name, uint64_t instance_number,
@@ -29,8 +29,8 @@ class ServerDBPaxos {
   bool testAndSetLockOwner(const std::string &file_name, uint64_t instance_number,
 			   const std::string &client_id);
   bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
-  // TODO: can be deleted.
-  std::string getParentName(const std::string &key);
+  void getStates
+  (std::unordered_map<std::string, std::unordered_set<std::string> > &client2heldLock);
  private:
   PaxosLib* paxos_lib_;
 };
