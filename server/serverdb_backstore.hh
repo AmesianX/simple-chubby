@@ -1,6 +1,7 @@
 #ifndef __SERVER_SERVERDB_BACKSTOREDB_H__
 #define __SERVER_SERVERDB_BACKSTOREDB_H__
 #include <cassert>
+#include <iostream>
 #include "paxos/back_store.hh"
 #include "server/serverdb.h"
 

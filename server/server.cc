@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <thread>
 
 #include <xdrpp/srpc.h>
@@ -18,6 +20,26 @@
 using namespace std;
 using namespace xdr;
 
+std::string GetServicePort(const std::string& path_name, int self_rank) {
+  std::ifstream config_file;
+  config_file.open(path_name);
+  std::string line;
+  std::getline(config_file, line);
+  std::getline(config_file, line);
+  int max_num = std::stoi(line);
+  for (int i = 0; i < max_num; ++i) {
+    std::getline(config_file, line);
+    std::getline(config_file, line);
+    if (i == self_rank) {
+      config_file.close();
+      return line.substr(line.find(":")+1);
+    }
+  }
+  std::cerr << "rank number invalid." << std::endl;
+  assert(false);
+  config_file.close();
+}
+
 int main(int argc, const char *argv[])
 {
     if (argc != 3) {
@@ -29,13 +51,16 @@ int main(int argc, const char *argv[])
       return 1;
     }
 
-    ServerdbBackstore back_store(std::stoi(argv[2]) + "chubbystore.db");
-    PaxosLib paxos_lib(argv[1], std::stoi(argv[2]), &back_store);
+    int self_rank = std::stoi(argv[2]);
+    ServerdbBackstore back_store(self_rank + "chubbystore.db");
+    PaxosLib paxos_lib(argv[1], self_rank, &back_store);
     std::thread run_thread(std::bind(&PaxosLib::Run, &paxos_lib));
     run_thread.detach();
 
-    xdr::chubby_server chubby_server(tcp_listen(UNIQUE_RPC_PORT, AF_INET),
-                                     &paxos_lib);
+    std::cout << GetServicePort(argv[1], self_rank) << std::endl;
+    xdr::chubby_server chubby_server(
+        tcp_listen(GetServicePort(argv[1], self_rank).c_str(), AF_INET),
+        &paxos_lib);
     api_v1_server s(&chubby_server, &paxos_lib);
 
     try {

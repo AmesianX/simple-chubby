@@ -28,12 +28,13 @@ bool ServerDBPaxos::checkAndCreate(
   std::unique_ptr<execute_res> result =
       paxos_lib_->paxos_interface_for_user->execute(std::move(arg));
   if (result->ok()) {
-    std::cout << "Reply: " << OpaqueToString(result->reply()) << std::endl;
+    std::string reply_str = OpaqueToString(result->reply());
+    std::cout << "Reply: " << reply_str << std::endl;
+    return true;
   } else {
     std::cout << "Not the leader." << std::endl;
     throw std::runtime_error("Not the Paxos leader.");
   }
-  return true;
 }
 bool ServerDBPaxos::checkAndOpen(
     const std::string &file_name, uint64_t *instance_number) {
