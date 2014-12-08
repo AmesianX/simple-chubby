@@ -15,7 +15,7 @@ using namespace std;
 
 
 string membership_parse(string list) {
-  string ret = "[ ";
+  string ret = "< ";
   vector<string> l;
   Tokenize(list, l, "|");
 
@@ -26,7 +26,7 @@ string membership_parse(string list) {
     ret += paths.back() + " ";
   }
 
-  ret += "]";
+  ret += ">";
   return ret;
 }
 
@@ -93,13 +93,20 @@ int main(int argc, const char *argv[]) {
 
     renew(groupdir);
 
+    string lastlist = "";
     while(run--) {
       string curlist;
       {
         lock_guard<mutex> lock(lk);
         curlist = grouplist;
       }
-      info("current membership is " + membership_parse(curlist));
+      if (curlist == lastlist) {
+        std::cout << ".";
+        std::cout.flush();
+      } else {
+        info("current membership is " + membership_parse(curlist));
+      }
+      lastlist = curlist;
       sleep(1);
     }
 

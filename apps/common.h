@@ -16,7 +16,8 @@ void checkErr(bool ret, std::string err_msg) {
 }
 
 void info(std::string msg) {
-  std::cout << "[APP]: " << msg << std::endl;
+  std::cout << "\n[APP]: " << msg;
+  std::cout.flush();
 }
 
 // Tokenize.

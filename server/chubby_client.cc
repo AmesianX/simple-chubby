@@ -8,6 +8,10 @@
 
 namespace xdr {
 
+static void clientPrint(const std::string& msg) {
+  std::cout << "\n[CLIENT]: " << msg;
+}
+
 chubby_client::chubby_client(const std::string& server_addr_file) {
   // use timestamp as the id
   struct timeval tv;
@@ -78,6 +82,7 @@ void chubby_client::connect_server_and_recover(bool is_init) {
 
         if (r->discriminant() == 0) {
           if (r->val()) {
+            clientPrint("connected to server " + addr.host + ":" + addr.service);
             break;
           }
         }
@@ -177,10 +182,11 @@ void chubby_client::evcb_loop() {
 
 void chubby_client::poll_recv_cb(msg_sock *ms, msg_ptr mp) {
   if (!mp) {
+    clientPrint("connection to server down!");
     delete ms;
-
     close(fd_);
     fd_ = -1;
+
     connect_server_and_recover();
     return;
   }

@@ -84,13 +84,20 @@ int main(int argc, const char *argv[]) {
 
     renew(leaderfile);
 
+    string lastleader = "";
     while(true) {
       string curleader;
       {
         lock_guard<mutex> lock(lk);
         curleader = leader;
       }
-      info("current leader is " + curleader);
+      if (curleader == lastleader) {
+        std::cout << ".";
+        std::cout.flush();
+      } else {
+        info("current leader is " + curleader);
+      }
+      lastleader = curleader;
       sleep(1);
     }
 
