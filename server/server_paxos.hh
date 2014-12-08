@@ -1,9 +1,9 @@
 // -*- C++ -*-
-// Automatically generated from server_paxos.x.
+// Automatically generated from server/server_paxos.x.
 // DO NOT EDIT or your changes may be overwritten
 
-#ifndef __XDR_SERVER_PAXOS_HH_INCLUDED__
-#define __XDR_SERVER_PAXOS_HH_INCLUDED__ 1
+#ifndef __XDR_SERVER_SERVER_PAXOS_HH_INCLUDED__
+#define __XDR_SERVER_SERVER_PAXOS_HH_INCLUDED__ 1
 
 #include <xdrpp/types.h>
 
@@ -500,7 +500,7 @@ private:
     CheckAndDeleteParam check_and_delete_param_;
     CheckAndReadParam check_and_read_param_;
     CheckAndUpdateParam check_and_update_param_;
-    TestAndSetLockOwnerParam check_and_test_lock_owner_param_;
+    TestAndSetLockOwnerParam test_and_set_lock_owner_param_;
     ResetLockOwnerParam reset_lock_owner_param_;
     GetStatesParam get_states_param_;
   };
@@ -538,7 +538,7 @@ public:
       _f(&ServerPaxosParam::check_and_update_param_, std::forward<A>(a)...);
       return true;
     case TEST_AND_SET_LOCK_OWNER:
-      _f(&ServerPaxosParam::check_and_test_lock_owner_param_, std::forward<A>(a)...);
+      _f(&ServerPaxosParam::test_and_set_lock_owner_param_, std::forward<A>(a)...);
       return true;
     case RESET_LOCK_OWNER:
       _f(&ServerPaxosParam::reset_lock_owner_param_, std::forward<A>(a)...);
@@ -655,15 +655,15 @@ public:
       return check_and_update_param_;
     throw xdr::xdr_wrong_union("ServerPaxosParam: check_and_update_param accessed when not selected");
   }
-  TestAndSetLockOwnerParam &check_and_test_lock_owner_param() {
+  TestAndSetLockOwnerParam &test_and_set_lock_owner_param() {
     if (_xdr_field_number(type_) == 6)
-      return check_and_test_lock_owner_param_;
-    throw xdr::xdr_wrong_union("ServerPaxosParam: check_and_test_lock_owner_param accessed when not selected");
+      return test_and_set_lock_owner_param_;
+    throw xdr::xdr_wrong_union("ServerPaxosParam: test_and_set_lock_owner_param accessed when not selected");
   }
-  const TestAndSetLockOwnerParam &check_and_test_lock_owner_param() const {
+  const TestAndSetLockOwnerParam &test_and_set_lock_owner_param() const {
     if (_xdr_field_number(type_) == 6)
-      return check_and_test_lock_owner_param_;
-    throw xdr::xdr_wrong_union("ServerPaxosParam: check_and_test_lock_owner_param accessed when not selected");
+      return test_and_set_lock_owner_param_;
+    throw xdr::xdr_wrong_union("ServerPaxosParam: test_and_set_lock_owner_param accessed when not selected");
   }
   ResetLockOwnerParam &reset_lock_owner_param() {
     if (_xdr_field_number(type_) == 7)
@@ -701,7 +701,7 @@ template<> struct xdr_traits<::ServerPaxosParam> : xdr_traits_base {
       : which == CHECK_AND_DELETE ? "check_and_delete_param"
       : which == CHECK_AND_READ ? "check_and_read_param"
       : which == CHECK_AND_UPDATE ? "check_and_update_param"
-      : which == TEST_AND_SET_LOCK_OWNER ? "check_and_test_lock_owner_param"
+      : which == TEST_AND_SET_LOCK_OWNER ? "test_and_set_lock_owner_param"
       : which == RESET_LOCK_OWNER ? "reset_lock_owner_param"
       : which == GET_STATES ? "get_states_param"
       : nullptr;
@@ -743,7 +743,7 @@ private:
     CheckAndDeleteResult check_and_delete_result_;
     CheckAndReadResult check_and_read_result_;
     CheckAndUpdateResult check_and_update_result_;
-    TestAndSetLockOwnerResult check_and_test_lock_owner_result_;
+    TestAndSetLockOwnerResult test_and_set_lock_owner_result_;
     ResetLockOwnerResult reset_lock_owner_result_;
     GetStatesResult get_states_result_;
   };
@@ -781,7 +781,7 @@ public:
       _f(&ServerPaxosResult::check_and_update_result_, std::forward<A>(a)...);
       return true;
     case TEST_AND_SET_LOCK_OWNER:
-      _f(&ServerPaxosResult::check_and_test_lock_owner_result_, std::forward<A>(a)...);
+      _f(&ServerPaxosResult::test_and_set_lock_owner_result_, std::forward<A>(a)...);
       return true;
     case RESET_LOCK_OWNER:
       _f(&ServerPaxosResult::reset_lock_owner_result_, std::forward<A>(a)...);
@@ -898,15 +898,15 @@ public:
       return check_and_update_result_;
     throw xdr::xdr_wrong_union("ServerPaxosResult: check_and_update_result accessed when not selected");
   }
-  TestAndSetLockOwnerResult &check_and_test_lock_owner_result() {
+  TestAndSetLockOwnerResult &test_and_set_lock_owner_result() {
     if (_xdr_field_number(type_) == 6)
-      return check_and_test_lock_owner_result_;
-    throw xdr::xdr_wrong_union("ServerPaxosResult: check_and_test_lock_owner_result accessed when not selected");
+      return test_and_set_lock_owner_result_;
+    throw xdr::xdr_wrong_union("ServerPaxosResult: test_and_set_lock_owner_result accessed when not selected");
   }
-  const TestAndSetLockOwnerResult &check_and_test_lock_owner_result() const {
+  const TestAndSetLockOwnerResult &test_and_set_lock_owner_result() const {
     if (_xdr_field_number(type_) == 6)
-      return check_and_test_lock_owner_result_;
-    throw xdr::xdr_wrong_union("ServerPaxosResult: check_and_test_lock_owner_result accessed when not selected");
+      return test_and_set_lock_owner_result_;
+    throw xdr::xdr_wrong_union("ServerPaxosResult: test_and_set_lock_owner_result accessed when not selected");
   }
   ResetLockOwnerResult &reset_lock_owner_result() {
     if (_xdr_field_number(type_) == 7)
@@ -944,7 +944,7 @@ template<> struct xdr_traits<::ServerPaxosResult> : xdr_traits_base {
       : which == CHECK_AND_DELETE ? "check_and_delete_result"
       : which == CHECK_AND_READ ? "check_and_read_result"
       : which == CHECK_AND_UPDATE ? "check_and_update_result"
-      : which == TEST_AND_SET_LOCK_OWNER ? "check_and_test_lock_owner_result"
+      : which == TEST_AND_SET_LOCK_OWNER ? "test_and_set_lock_owner_result"
       : which == RESET_LOCK_OWNER ? "reset_lock_owner_result"
       : which == GET_STATES ? "get_states_result"
       : nullptr;
@@ -977,4 +977,4 @@ template<> struct xdr_traits<::ServerPaxosResult> : xdr_traits_base {
 };
 }
 
-#endif // !__XDR_SERVER_PAXOS_HH_INCLUDED__
+#endif // !__XDR_SERVER_SERVER_PAXOS_HH_INCLUDED__

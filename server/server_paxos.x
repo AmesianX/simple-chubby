@@ -91,7 +91,7 @@ case CHECK_AND_READ:
 case CHECK_AND_UPDATE:
     CheckAndUpdateParam check_and_update_param;
 case TEST_AND_SET_LOCK_OWNER:
-    TestAndSetLockOwnerParam check_and_test_lock_owner_param;
+    TestAndSetLockOwnerParam test_and_set_lock_owner_param;
 case RESET_LOCK_OWNER:
     ResetLockOwnerParam reset_lock_owner_param;
 case GET_STATES:
@@ -109,7 +109,7 @@ case CHECK_AND_READ:
 case CHECK_AND_UPDATE:
     CheckAndUpdateResult check_and_update_result;
 case TEST_AND_SET_LOCK_OWNER:
-    TestAndSetLockOwnerResult check_and_test_lock_owner_result;
+    TestAndSetLockOwnerResult test_and_set_lock_owner_result;
 case RESET_LOCK_OWNER:
     ResetLockOwnerResult reset_lock_owner_result;
 case GET_STATES:
