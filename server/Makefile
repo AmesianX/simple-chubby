@@ -9,7 +9,7 @@ SERVER_SRC := server/server.cc server/serverimpl.cc server/chubby_server.cc serv
 
 SERVER_OBJ := $(SERVER_SRC:.c=.o)
 SERVER_OBJ := $(SERVER_OBJ:.cc=.o)
-$(SERVER_OBJ): include/server.hh include/event.hh
+$(SERVER_OBJ): include/server.hh include/event.hh server/server_paxos.hh
 
 server/%.o: server/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<

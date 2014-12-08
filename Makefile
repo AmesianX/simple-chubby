@@ -39,6 +39,9 @@ include/server.hh: include/server.x
 include/event.hh: include/event.x
 	$(XDRC) -hh -o include/event.hh $<
 
+server/server_paxos.hh: server/server_paxos.x
+	$(XDRC) -hh -o server/server_paxos.hh $<
+
 xdrpp:
 	cd xdrpp; test -f Makefile || ./configure CXX="$(CXX)" CXXFLAGS="$(CXXFLAGS)"
 	$(MAKE) -C xdrpp
