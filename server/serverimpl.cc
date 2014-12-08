@@ -141,10 +141,8 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   std::unique_ptr<RetFd> res(new RetFd);
   std::string file_name = arg->name;
   Mode mode = arg->mode;
-  //std::string client_id = session2client_map[session_id]; 
-  // TODO(for debug only).
-  std::string client_id = "pujing";
-  //assert(!client_id.empty());
+  std::string client_id = session2client_map[session_id];
+  assert(!client_id.empty());
 
   cout<<"\nserver: fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
 
