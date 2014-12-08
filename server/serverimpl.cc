@@ -142,7 +142,6 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   std::string file_name = arg->name;
   Mode mode = arg->mode;
   std::string client_id = session2client_map[session_id];
-  client_id = "pujing";
   assert(!client_id.empty());
 
   cout<<"\nserver: fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
@@ -235,7 +234,6 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = session2client_map[session_id];
-  client_id = "pujing";
   assert(!client_id.empty());
   
   cout<<"\nserver: fileClose: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
@@ -339,7 +337,6 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = session2client_map[session_id];
-  client_id = "pujing";
   assert(!client_id.empty());
 
   cout<<"\nserver: fileDelete: ("<< arg->file_name
@@ -511,7 +508,6 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = session2client_map[session_id];
-  client_id = "pujing";
   assert(!client_id.empty());
 
   cout<<"\nserver: acquire: ("<< arg->file_name << ", "
@@ -562,7 +558,6 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = session2client_map[session_id];
-  client_id = "pujing";
   assert(!client_id.empty());
 
   cout<<"\nserver: tryAcquire: ("<< arg->file_name << ", "
@@ -615,7 +610,6 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   std::string client_id = session2client_map[session_id];
-  client_id = "pujing";
   assert(!client_id.empty());
 
   cout<<"\nserver: release: ("<< arg->file_name << ", "
