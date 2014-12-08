@@ -32,6 +32,7 @@ bool checkName(const std::string &key);
 void
 api_v1_server::printFd()
 {
+  return;
   cout<< "\tsession2client_map:"<<endl;
   for (auto &p :session2client_map)
     cout<<"\t\tsession: "<<p.first<<" -> client: "<<p.second<<endl;
@@ -794,7 +795,7 @@ api_v1_server::disconnect(xdr::SessionId session_id)
 void
 api_v1_server::initializeLeader()
 {
-  std::cout << "\nserver: initializeLeader()" << std::endl;
+  std::cout << "[LEADER_LOGIC] Leader is initialized." << std::endl;
   session2client_map.clear();
   file2fd_map.clear();
   session2fd_map.clear();

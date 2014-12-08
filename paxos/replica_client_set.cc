@@ -29,9 +29,9 @@ void ReplicaClientSet::detectFailure(
   pthread_mutex_lock(&start_connecting_lock_);
   pthread_mutex_lock(&replica_client->lock);
 
-  printf("Lost inter-paxos connection with rank#%d.\n",
-         replica_state_->getReplicaAddressRank(
-             replica_client->network_address));
+  //printf("Lost inter-paxos connection with rank#%d.\n",
+  //       replica_state_->getReplicaAddressRank(
+  //           replica_client->network_address));
   replica_client->fd.clear();
   delete replica_client->replica_client;
   replica_client->replica_client = nullptr;
@@ -48,8 +48,8 @@ void ReplicaClientSet::tryConnect() {
       try {
         state.fd = xdr::tcp_connect(std::get<0>(host_and_port).c_str(),
                                     std::get<1>(host_and_port).c_str());
-        printf("Built inter-paxos connection with rank#%d.\n",
-               replica_state_->getReplicaAddressRank(state.network_address));
+        //printf("Built inter-paxos connection with rank#%d.\n",
+        //       replica_state_->getReplicaAddressRank(state.network_address));
         xdr::set_close_on_exec(state.fd.get());
         state.replica_client = new ReplicaClientType(state.fd.get());
         std::thread detect_thread(std::bind(

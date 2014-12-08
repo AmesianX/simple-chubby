@@ -6,13 +6,16 @@
 #include "server/server_paxos.hh"
 #include "server/serverdb_backstore.hh"
 std::string ServerdbBackstore::Run(const std::string input) {
-  std::cout << "[paxos backstore] accepted: " << input << std::endl;
 
   // Deserialize input to param.
   ServerPaxosParam param;
   xdr::msg_ptr serialized_param = xdr::message_t::alloc(input.size());
   memcpy(serialized_param->data(), input.data(), input.size());
   xdr::xdr_from_msg(serialized_param, param);
+
+  std::cout << "[PAXOS] Backstore replicate: "
+      << xdr::xdr_traits<CallType>::enum_name(CallType(param.type()))
+      << std::endl;
 
   // Build result.
   ServerPaxosResult result(CHECK_AND_CREATE);
@@ -29,8 +32,6 @@ std::string ServerdbBackstore::Run(const std::string input) {
     case CHECK_AND_CREATE:
       file_name = param.check_and_create_param().file_name;
       is_dir = param.check_and_create_param().is_dir;
-      std::cout << "[paxos backstore] analyzed: " << file_name
-          << " " << is_dir << std::endl;
       success = server_db.checkAndCreate(file_name, is_dir, &instance_number);
       result.type(CHECK_AND_CREATE);
       result.check_and_create_result().instance_number = instance_number;
@@ -38,7 +39,6 @@ std::string ServerdbBackstore::Run(const std::string input) {
       break;
     case CHECK_AND_OPEN:
       file_name = param.check_and_open_param().file_name;
-      std::cout << "[paxos backstore] analyzed: " << file_name << std::endl;
       success = server_db.checkAndOpen(file_name, &instance_number);
       result.type(CHECK_AND_OPEN);
       result.check_and_open_result().instance_number = instance_number;
@@ -47,8 +47,6 @@ std::string ServerdbBackstore::Run(const std::string input) {
     case CHECK_AND_DELETE:
       file_name = param.check_and_delete_param().file_name;
       instance_number = param.check_and_delete_param().instance_number;
-      std::cout << "[paxos backstore] analyzed: " << file_name << " "
-          << instance_number <<std::endl;
       success = server_db.checkAndDelete(file_name, instance_number);
       result.type(CHECK_AND_DELETE);
       result.check_and_delete_result().success = success;
@@ -56,8 +54,6 @@ std::string ServerdbBackstore::Run(const std::string input) {
     case CHECK_AND_READ:
       file_name = param.check_and_read_param().file_name;
       instance_number = param.check_and_read_param().instance_number;
-      std::cout << "[paxos backstore] analyzed: " << file_name << " "
-          << instance_number <<std::endl;
       success = server_db.checkAndRead(
           file_name, instance_number, &content, &meta);
       result.type(CHECK_AND_READ);
@@ -78,8 +74,6 @@ std::string ServerdbBackstore::Run(const std::string input) {
       file_name = param.check_and_update_param().file_name;
       instance_number = param.check_and_update_param().instance_number;
       content = param.check_and_update_param().content;
-      std::cout << "[paxos backstore] analyzed: " << file_name << " "
-          << instance_number <<std::endl;
       success = server_db.checkAndUpdate(
           file_name, instance_number, content);
       result.type(CHECK_AND_UPDATE);
@@ -89,8 +83,6 @@ std::string ServerdbBackstore::Run(const std::string input) {
       file_name = param.test_and_set_lock_owner_param().file_name;
       instance_number = param.test_and_set_lock_owner_param().instance_number;
       client_id = param.test_and_set_lock_owner_param().client_id;
-      std::cout << "[paxos backstore] analyzed: " << file_name << " "
-          << instance_number << " " << client_id << std::endl;
       success = server_db.testAndSetLockOwner(
           file_name, instance_number, client_id);
       result.type(TEST_AND_SET_LOCK_OWNER);
@@ -99,8 +91,6 @@ std::string ServerdbBackstore::Run(const std::string input) {
     case RESET_LOCK_OWNER:
       file_name = param.reset_lock_owner_param().file_name;
       instance_number = param.reset_lock_owner_param().instance_number;
-      std::cout << "[paxos backstore] analyzed: " << file_name << " "
-          << instance_number <<std::endl;
       success = server_db.resetLockOwner(
           file_name, instance_number);
       result.type(RESET_LOCK_OWNER);
