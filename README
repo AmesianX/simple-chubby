@@ -1,3 +1,7 @@
 How to run server:
 # ./server/server paxos/config.txt [rank_number]
 You'd better use rank=0 for single server.
+
+How to run client:
+# ./apps/leader_elect paxos/config.txt my_id
+
