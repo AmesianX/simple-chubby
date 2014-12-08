@@ -96,8 +96,7 @@ public:
    */
   bool resetLockOwner(const std::string &file_name, uint64_t instance_number);
 
-  void getStates
-  (std::unordered_map<std::string, std::unordered_set<std::string> > &client2heldLock);
+  void getStates(std::vector<std::pair<std::string, std::string> > &client2heldLock);
 
 private:
   // Helper functions

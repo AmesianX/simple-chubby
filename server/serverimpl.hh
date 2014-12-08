@@ -85,17 +85,17 @@ private:
   uint64_t master_sequence_number;
   std::hash<std::string> str_hash;
   
-  std::unordered_map<std::string, std::string> session2client_map;
+  std::unordered_map<xdr::SessionId, std::string> session2client_map;
 
   std::unordered_map<std::string, std::list<SessionFdPair> > file2fd_map;
   std::unordered_map<xdr::SessionId, std::list<FileHandler *> > session2fd_map;
   
   std::unordered_map<std::string, 
 		     std::list<std::pair <xdr::SessionId, uint32_t> > > file2lockQueue_map;
-  std::unordered_map<xdr::SessionId,
-		     std::unordered_set<std::string> > session2heldLock_map;
-  std::unordered_map<xdr::SessionId,
-		     std::unordered_set<std::string> > session2ephemeral_map;
+  std::unordered_map<std::string,
+		     std::unordered_set<std::string> > client2heldLock_map;
+  std::unordered_map<std::string,
+		     std::unordered_set<std::string> > client2ephemeral_map;
   
   std::unordered_map<std::string, std::list<xdr::SessionId> > file2lockChange_map;
   std::unordered_map<std::string, std::list<xdr::SessionId> > file2contentChange_map;

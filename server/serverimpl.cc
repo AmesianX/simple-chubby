@@ -59,9 +59,9 @@ api_v1_server::printFd()
 	   << ", "<< s.second <<")"<<endl;
   }
 
-  cout << "\tsession2heldLock_map:" <<endl;
-  for (auto it = session2heldLock_map.begin();
-       it != session2heldLock_map.end(); it++) {
+  cout << "\tclient2heldLock_map:" <<endl;
+  for (auto it = client2heldLock_map.begin();
+       it != client2heldLock_map.end(); it++) {
     cout << "\t\t session: "<< it->first <<endl;
     if (!it->second.empty()) {
       cout << "\t\t\t locks: ";
@@ -71,9 +71,9 @@ api_v1_server::printFd()
     }
   }
 
-  cout << "\tsession2ephemeral_map:" <<endl;
-  for (auto it = session2ephemeral_map.begin();
-       it != session2ephemeral_map.end(); it++) {
+  cout << "\tclient2ephemeral_map:" <<endl;
+  for (auto it = client2ephemeral_map.begin();
+       it != client2ephemeral_map.end(); it++) {
     cout << "\t\t session: "<< it->first <<endl;
     if (!it->second.empty()) {
       cout << "\t\t\t file: ";
@@ -140,6 +140,8 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   std::unique_ptr<RetFd> res(new RetFd);
   std::string file_name = arg->name;
   Mode mode = arg->mode;
+  std::string client_id = session2client_map[session_id]; 
+  assert(!client_id.empty());
 
   cout<<"\nserver: fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
 
@@ -171,7 +173,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
       return res;
     }
     if (mode & EPHEMERAL)
-      session2ephemeral_map[session_id].insert(file_name);
+      client2ephemeral_map[client_id].insert(file_name);
   } else { // open an existing file or dir
     // check file is exist
     if(!db.checkAndOpen(file_name, &(fd->instance_number))) {
@@ -218,6 +220,8 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
 			 xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
+  std::string client_id = session2client_map[session_id];
+  assert(!client_id.empty());
   
   cout<<"\nserver: fileClose: ("<< arg->file_name << ", "<< arg->instance_number<<")"<<endl;
 
@@ -233,15 +237,15 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   }
 
   // reclaim the locks if held
-  if( session2heldLock_map.count(session_id) > 0
-      && session2heldLock_map[session_id].count(fd->file_name) > 0 ) {
+  if( client2heldLock_map.count(client_id) > 0
+      && client2heldLock_map[client_id].count(fd->file_name) > 0 ) {
     std::unique_ptr<FileHandler> tmp_fd(new FileHandler);
     *tmp_fd = *fd;
     release(std::move(tmp_fd), session_id, (uint32_t) -1);
   }
 
   // delete the node if it is ephemeral
-  if( session2ephemeral_map[session_id].count(fd->file_name) > 0) {
+  if( client2ephemeral_map[client_id].count(fd->file_name) > 0) {
     std::unique_ptr<FileHandler> tmp_fd(new FileHandler);
     *tmp_fd = *fd;
     fileDelete(std::move(tmp_fd), session_id, (uint32_t) -1);
@@ -310,7 +314,9 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
                           xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  
+  std::string client_id = session2client_map[session_id];
+  assert(!client_id.empty());
+
   cout<<"\nserver: fileDelete: ("<< arg->file_name
       << ", "<< arg->instance_number<<")"<<endl;
   
@@ -353,9 +359,9 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   // clear lock queue
   file2lockQueue_map.erase(arg->file_name);
 
-  session2ephemeral_map[session_id].erase(fd->file_name);
-  if(session2ephemeral_map[session_id].empty())
-    session2ephemeral_map.erase(session_id);
+  client2ephemeral_map[client_id].erase(fd->file_name);
+  if(client2ephemeral_map[client_id].empty())
+    client2ephemeral_map.erase(client_id);
 
   // return normally with TRUE value
   res->discriminant(0);
@@ -452,8 +458,9 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
                        xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  std::string client_id = chubby_server_->getClientId(session_id);
-  
+  std::string client_id = session2client_map[session_id];
+  assert(!client_id.empty());
+
   cout<<"\nserver: acquire: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<session_id<<")"<<endl;
   
@@ -471,7 +478,7 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
   if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
     // succeeded in DB, return true
     assert(file2lockQueue_map.count(fd->file_name) == 0);
-    session2heldLock_map[session_id].insert(fd->file_name);
+    client2heldLock_map[client_id].insert(fd->file_name);
     res->discriminant(0);
     res->val() = true;
     chubby_server_->reply(session_id, xid, std::move(res));
@@ -493,8 +500,9 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
                           xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  std::string client_id = chubby_server_->getClientId(session_id);
-  
+  std::string client_id = session2client_map[session_id];
+  assert(!client_id.empty());
+
   cout<<"\nserver: tryAcquire: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<session_id<<")"<<endl;
 
@@ -512,7 +520,7 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
   if(db.testAndSetLockOwner(fd->file_name, fd->instance_number, client_id)) {
     // succeeded in DB, return true
     assert(file2lockQueue_map.count(fd->file_name) == 0);
-    session2heldLock_map[session_id].insert(fd->file_name);
+    client2heldLock_map[client_id].insert(fd->file_name);
     res->discriminant(0);
     res->val() = true;
     chubby_server_->reply(session_id, xid, std::move(res));
@@ -536,6 +544,8 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
                        xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
+  std::string client_id = session2client_map[session_id];
+  assert(!client_id.empty());
 
   cout<<"\nserver: release: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<session_id<<")"<<endl;
@@ -559,9 +569,9 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
   }
 
   // reset successed
-  session2heldLock_map[session_id].erase(fd->file_name);
-  if(session2heldLock_map[session_id].empty())
-    session2heldLock_map.erase(session_id);
+  client2heldLock_map[client_id].erase(fd->file_name);
+  if(client2heldLock_map[client_id].empty())
+    client2heldLock_map.erase(client_id);
   res->discriminant(0);
   res->val() = true;
   chubby_server_->reply(session_id, xid, std::move(res));
@@ -578,7 +588,10 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
     
     // reply acquire() PRC
     std::unique_ptr<RetBool> r(new RetBool);
-    session2heldLock_map[acquire_rpc.first].insert(fd->file_name);
+    std::string client_id_rpc = session2client_map[acquire_rpc.first];
+    assert(!client_id_rpc.empty());
+      
+    client2heldLock_map[client_id_rpc].insert(fd->file_name);
     r->discriminant(0);
     r->val() = true;
     chubby_server_->reply(acquire_rpc.first, acquire_rpc.second, std::move(r));
@@ -601,8 +614,18 @@ api_v1_server::startSession(std::unique_ptr<longstring> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   
-  // Fill in function body here
-  
+  try {
+    // TODO test itself whether it is a leader
+    session2client_map[session_id] = *arg;
+
+    res->discriminant(0);
+    res->val() = false;
+  } catch (std::exception &e) {
+    std::cerr<<"startSession catch an expection:"<<e.what()<<endl;
+    res->discriminant(0);
+    res->val() = false;
+  }
+  chubby_server_->reply(session_id, xid, std::move(res));
   return res;
 }
 
@@ -629,11 +652,26 @@ api_v1_server::disconnect(xdr::SessionId session_id)
     *arg = *fd;
     fileClose(std::move(arg), session_id, (uint32_t) -1);
   }
+  session2client_map.erase(session_id);
 }
 
-void api_v1_server::initializeLeader()
+void
+api_v1_server::initializeLeader()
 {
+  session2client_map.clear();
+  file2fd_map.clear();
+  session2fd_map.clear();
+  file2lockQueue_map.clear();
+  client2heldLock_map.clear();
+  client2ephemeral_map.clear();
+  file2lockChange_map.clear();
+  file2contentChange_map.clear();
 
+  // recover from persistent data store
+  std::vector<std::pair<std::string, std::string> > client2heldLock_list;
+  db.getStates(client2heldLock_list);
+  for (auto& p : client2heldLock_list)
+    client2heldLock_map[p.first].insert(p.second);
 }
 
 
