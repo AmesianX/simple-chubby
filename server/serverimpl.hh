@@ -35,7 +35,8 @@ public:
   using rpc_interface_type = api_v1;
 
   api_v1_server(xdr::chubby_server* server)
-    : chubby_server_(server), db("chubbystore.db")  { }
+    : chubby_server_(server), db("chubbystore.db")  
+  { initializeLeader(); }
 
   ~api_v1_server() {}
 
