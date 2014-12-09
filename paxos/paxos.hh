@@ -385,6 +385,8 @@ struct vc_state {
 
   _mode_t mode{};
   view_t view{};
+  viewid_t proposed_vid{};
+  view_t accepted_view{};
 };
 namespace xdr {
 template<> struct xdr_traits<::vc_state::_mode_t>
@@ -410,16 +412,26 @@ template<> struct xdr_traits<::vc_state>
                               &::vc_state::mode>,
                     field_ptr<::vc_state,
                               decltype(::vc_state::view),
-                              &::vc_state::view>> {
+                              &::vc_state::view>,
+                    field_ptr<::vc_state,
+                              decltype(::vc_state::proposed_vid),
+                              &::vc_state::proposed_vid>,
+                    field_ptr<::vc_state,
+                              decltype(::vc_state::accepted_view),
+                              &::vc_state::accepted_view>> {
   template<typename Archive> static void
   save(Archive &ar, const ::vc_state &obj) {
     archive(ar, obj.mode, "mode");
     archive(ar, obj.view, "view");
+    archive(ar, obj.proposed_vid, "proposed_vid");
+    archive(ar, obj.accepted_view, "accepted_view");
   }
   template<typename Archive> static void
   load(Archive &ar, ::vc_state &obj) {
     archive(ar, obj.mode, "mode");
     archive(ar, obj.view, "view");
+    archive(ar, obj.proposed_vid, "proposed_vid");
+    archive(ar, obj.accepted_view, "accepted_view");
   }
 };
 }
@@ -451,7 +463,7 @@ template<> struct xdr_traits<::view_change_arg>
 
 struct view_change_reject {
   view_t oldview{};
-  viewid_t newid{};
+  viewid_t newvid{};
 };
 namespace xdr {
 template<> struct xdr_traits<::view_change_reject>
@@ -459,17 +471,17 @@ template<> struct xdr_traits<::view_change_reject>
                               decltype(::view_change_reject::oldview),
                               &::view_change_reject::oldview>,
                     field_ptr<::view_change_reject,
-                              decltype(::view_change_reject::newid),
-                              &::view_change_reject::newid>> {
+                              decltype(::view_change_reject::newvid),
+                              &::view_change_reject::newvid>> {
   template<typename Archive> static void
   save(Archive &ar, const ::view_change_reject &obj) {
     archive(ar, obj.oldview, "oldview");
-    archive(ar, obj.newid, "newid");
+    archive(ar, obj.newvid, "newvid");
   }
   template<typename Archive> static void
   load(Archive &ar, ::view_change_reject &obj) {
     archive(ar, obj.oldview, "oldview");
-    archive(ar, obj.newid, "newid");
+    archive(ar, obj.newvid, "newvid");
   }
 };
 }

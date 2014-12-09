@@ -23,6 +23,7 @@ paxos_v1_server::replicate(std::unique_ptr<replicate_arg> arg)
            replica_state_->getClientUseAddressRank(request.newview.primary.addr));
     replica_state_->isLeader = false;
     replica_state_->view = request.newview;
+    replica_state_->mode = ReplicaState::VC_ACTIVE;
     replica_state_->EndAccess();
 
     return res;
@@ -35,9 +36,47 @@ std::unique_ptr<view_change_res>
 paxos_v1_server::view_change(std::unique_ptr<view_change_arg> arg)
 {
   std::unique_ptr<view_change_res> res(new view_change_res);
-  
-  // Fill in function body here
-  
+
+  // TODO: viewid_t compare: cid_t less is larger
+  replica_state_->BeginAccess();
+  // TODO: change state to underling?
+
+  viewid_t old_vid = arg->oldview.vid;
+  viewid_t new_vid = arg->newvid;
+  viewid_t cur_vid = replica_state_->view.vid;
+
+  if (old_vid < cur_vid) {
+    // pp8 case 1: reject
+    res->accepted(false);
+    res->reject().oldview = replica_state_->view;
+    res->reject().newvid = replica_state_->proposed_vid;
+  } else if (new_vid < replica_state_->proposed_vid) {
+    // pp8 case 2: reject
+    if (cur_vid < old_vid) {
+      replica_state_->view = arg->oldview;
+    }
+    res->accepted(false);
+    res->reject().oldview = replica_state_->view;
+    res->reject().newvid = replica_state_->proposed_vid;
+  } else if (old_vid == cur_vid && !isNullView(replica_state_->accepted_view)) {
+    // pp8 case 3: accept
+    replica_state_->mode == ReplicaState::VC_UNDERLING;
+    replica_state_->proposed_vid = arg->newvid;
+    res->accepted(true);
+    res->accept().myid = replica_state_->getReplicaAddress(replica_state_->getSelfRank());
+    res->accept().newview = replica_state_->accepted_view;
+  } else {
+    // pp8 case 4: accept
+    replica_state_->mode == ReplicaState::VC_UNDERLING;
+    replica_state_->view = arg->oldview;
+    replica_state_->proposed_vid = arg->newvid;
+    setNullView(replica_state_->accepted_view);
+    res->accepted(true);
+    res->accept().myid = replica_state_->getReplicaAddress(replica_state_->getSelfRank());
+    setNullView(res->accept().newview);
+  }
+  replica_state_->EndAccess();
+
   return res;
 }
 
@@ -45,9 +84,17 @@ std::unique_ptr<new_view_res>
 paxos_v1_server::new_view(std::unique_ptr<new_view_arg> arg)
 {
   std::unique_ptr<new_view_res> res(new new_view_res);
-  
-  // Fill in function body here
-  
+
+  replica_state_->BeginAccess();
+  if (arg->view.vid == replica_state_->proposed_vid) {
+    replica_state_->accepted_view = arg->view;
+    res->accepted = true;
+  } else {
+    res->accepted = false;
+  }
+  // FIXME: arg->latest is ignored
+  replica_state_->EndAccess();
+
   return res;
 }
 
@@ -55,27 +102,11 @@ std::unique_ptr<init_view_res>
 paxos_v1_server::init_view(std::unique_ptr<init_view_arg> arg)
 {
   std::unique_ptr<init_view_res> res(new init_view_res);
+
   replica_state_->BeginAccess();
-  if (replica_state_->isLeader) {
-    replica_state_->EndAccess();
-    res->succeed = false;
-    return res;
-  }
-  printf("[PAXOS] Promoted to Paxos leader, rank#%d.\n",
-         replica_state_->getSelfRank());
-  replica_state_->isLeader = true;
-  int rank = replica_state_->getSelfRank();
-  replica_state_->view.primary.id =
-      replica_state_->getReplicaAddress(rank);
-  replica_state_->view.primary.addr =
-      replica_state_->getClientUseAddress(rank);
-  replica_state_->mode = ReplicaState::VC_ACTIVE;
-  // Broadcast itself.
-  init_view_request command;
-  command.newview = replica_state_->view;
+  replica_state_->markToPromote(arg->view);
   replica_state_->EndAccess();
-  execute_replicate_engine_->replicateCommand(command);
-  execute_replicate_engine_->initializeLeader();
+
   res->succeed = true;
   return res;
 }

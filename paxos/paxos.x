@@ -82,6 +82,13 @@ struct vc_state {
   } mode;
   // last (or current) formed view.
   view_t view;
+  // last committed op at any cohort.
+  //viewstamp_t latest_seen;
+  // highest proposed new view-id.
+  viewid_t proposed_vid;
+  // accepted new view (if any).
+  //view_t* accepted_view;
+  view_t accepted_view;
 };
 
 /*
@@ -100,7 +107,7 @@ struct view_change_arg {
 
 struct view_change_reject {
   view_t oldview;
-  viewid_t newid;
+  viewid_t newvid;
 };
 struct view_change_accept {
   cid_t myid;

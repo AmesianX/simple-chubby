@@ -18,11 +18,11 @@ class ChangeViewEngine {
                    ExecuteReplicateEngine* execute_replicate_engine);
   void sleep_random();
   bool isLeaderDown();
-  // Choose a new leader with the minimum rank.
-  int getNewLeaderRank();
-  // Returns false if notified another replica, returns true if become leader
-  // itself.
-  bool NotifyNewLeader();
+  //// Choose a new leader with the minimum rank.
+  //int getNewLeaderRank();
+  //// Returns false if notified another replica, returns true if become leader
+  //// itself.
+  //bool NotifyNewLeader();
   void run();
  private:
   ReplicaState* replica_state_;

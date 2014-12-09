@@ -1,6 +1,7 @@
 #ifndef __PAXOS_REPLICA_STATE_HH_INCLUDED__
 #define __PAXOS_REPLICA_STATE_HH_INCLUDED__ 1
 
+#include <cassert>
 #include <pthread.h>
 #include <algorithm>
 #include <fstream>
@@ -8,33 +9,22 @@
 #include <string>
 #include <vector>
 #include "paxos/paxos.hh"
-/*
-struct vc_state {
-  enum _mode_t : std::uint32_t {
-    VC_ACTIVE,
-    VC_MANAGER,
-    VC_UNDERLING,
-  };
 
-  _mode_t mode{};  // Maintained.
-  view_t view{};
-};
-struct view_t {
-  viewid_t vid{};
-  cohort_t primary{};  // Maintained.
-  xdr::xvector<cohort_t> backups{};
-};
-struct viewid_t {
-  std::uint64_t counter{};
-  cid_t manager{};
-};
-using cid_t = xdr::xstring<>;
-struct cohort_t {
-  cid_t id{};
-  net_address_t addr{};
-};
-using net_address_t = xdr::xstring<>;
-*/
+inline bool operator<(const viewid_t& a, const viewid_t& b) {
+  return a.counter < b.counter || (a.counter == b.counter && a.manager < b.manager);
+}
+inline bool operator==(const viewid_t& a, const viewid_t& b) {
+  return a.counter == b.counter && a.manager == b.manager;
+}
+
+inline bool isNullView(const view_t& v) {
+  return v.vid.counter == 0 && v.vid.manager.empty();
+}
+inline void setNullView(view_t& v) {
+  v.vid.counter = 0;
+  v.vid.manager = "";
+}
+
 struct ReplicaState : public vc_state {
  public:
   ReplicaState(const std::string& path_name, int self_rank);
@@ -52,6 +42,7 @@ struct ReplicaState : public vc_state {
   // "view.view_id" : viewid_t.
   // The following access is thread-safe.
   bool isLeader;
+  bool toBePromoted{false};
   bool isInitialized{false};
   net_address_t getReplicaAddress(int rank_id) const {
     return replica_address_[rank_id];
@@ -87,6 +78,28 @@ struct ReplicaState : public vc_state {
     } else {
       return std::distance(client_use_address_.begin(), iter);
     }
+  }
+
+  cohort_t makeCohort(int rank) {
+    cohort_t c;
+    c.id = getReplicaAddress(rank);
+    c.addr = getClientUseAddress(rank);
+    return c;
+  }
+
+  void markToPromote(const view_t& v) {
+    assert(v.primary.id == getReplicaAddress(self_rank_));
+    view.vid = v.vid;
+    view.primary = v.primary;
+    view.backups = v.backups;
+    if (proposed_vid < v.vid) proposed_vid = v.vid;
+    toBePromoted = true;
+  }
+
+  void doPromote() {
+    toBePromoted = false;
+    isLeader = true;
+    mode = ReplicaState::VC_ACTIVE;
   }
 
  private:
