@@ -110,6 +110,8 @@ void ChangeViewEngine::run() {
   while (true) {
     replica_state_->BeginAccess();
     if (replica_state_->toBePromoted) {
+      std::cout << "[PAXOS] Promoted to Paxos leader, rank#" << replica_state_->getSelfRank() << std::endl;
+
       replica_state_->doPromote();
       init_view_request command;
       command.newview = replica_state_->view;
@@ -199,6 +201,7 @@ void ChangeViewEngine::run() {
       }
 
       // TODO: maintain view primary and backups
+      std::cout << "[PAXOS] Majority accept the new view id." << std::endl;
 
       new_view_arg nv_arg{};
       nv_arg.view.vid = vc_arg.newvid;
@@ -256,14 +259,16 @@ void ChangeViewEngine::run() {
         continue;
       }
 
-      if (nv_arg.view.primary == replica_state_->makeCohort(self_rank)) {
+      int leader_rank = replica_state_->getClientUseAddressRank(nv_arg.view.primary.addr);
+      std::cout << "[PAXOS] New view formed and notify the new leader, rank#" << leader_rank << std::endl;
+
+      if (leader_rank == self_rank) {
         // I am the new leader
         replica_state_->markToPromote(nv_arg.view);
         replica_state_->EndAccess();
         continue;
       } else {
         // notify the new leader
-        int leader_rank = replica_state_->getClientUseAddressRank(nv_arg.view.primary.addr);
         auto* replica_client = replica_client_set_->getReplicaClient(leader_rank);
         if (replica_client) {
           init_view_arg iv_arg;
