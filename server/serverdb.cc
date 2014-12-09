@@ -74,7 +74,7 @@ dirContentDelete(const string &content, const string &node)
 bool
 ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *instance_number)
 {
-  cout<<"db: checkAndCreate("<<file_name<<", "<< is_dir<<") ";
+  cout<<"[DB] checkAndCreate("<<file_name<<", "<< is_dir<<") ";
   // TODO implement instance_number
   // check if node exits
   SQLStmt node_q(db, "SELECT name FROM fs WHERE name = \"%s\"", file_name.c_str());
@@ -146,7 +146,7 @@ ServerDB::checkAndCreate(const std::string &file_name, bool is_dir, uint64_t *in
 bool
 ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 {
-  cout<<"db: checkAndOpen("<<file_name<<") ";
+  cout<<"[DB] checkAndOpen("<<file_name<<") ";
 
   // check if node exits
   SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
@@ -167,7 +167,7 @@ ServerDB::checkAndOpen(const std::string &file_name, uint64_t *instance_number)
 bool 
 ServerDB::checkAndDelete(const std::string &file_name, uint64_t instance_number)
 {
-  cout<<"db: checkAndDelete("<<file_name<<", "<<instance_number<<") ";
+  cout<<"[DB] checkAndDelete("<<file_name<<", "<<instance_number<<") ";
   SQLStmt s(db, "SELECT lock_owner, instance_number, is_directory, content "
 	    "FROM fs WHERE name = \"%s\"",
             file_name.c_str());
@@ -246,6 +246,9 @@ bool
 ServerDB::checkAndRead(const std::string &file_name, uint64_t instance_number,
 		       std::string *content, MetaData *meta)
 {
+
+  cout<<"[DB] checkAndRead("<<file_name<<", "<<instance_number
+      <<") ";
   SQLStmt s(db, "SELECT content, instance_number, "
 	    "content_generation_number, lock_generation_number, "
 	    "file_content_checksum, is_directory FROM fs WHERE name = \"%s\"",
@@ -254,13 +257,16 @@ ServerDB::checkAndRead(const std::string &file_name, uint64_t instance_number,
   s.step();
   if (!s.row()) {
     // node does not exist
+    cout<< " fails. node does not exist"<<endl;
     return false;
   }
 
   // check INSTANCE_NUMBER
   uint64_t node_instance_number = s.integer(1);
-  if (node_instance_number != instance_number)
+  if (node_instance_number != instance_number){
+    cout<< " fails. instance_number doesn't match"<<endl;
     return false;
+  }
 
   if (content != nullptr)
     *content = s.str(0);
@@ -271,6 +277,7 @@ ServerDB::checkAndRead(const std::string &file_name, uint64_t instance_number,
     meta->file_content_checksum = s.integer(4);
     meta->is_directory = s.integer(5);
   }
+  cout<< " succeeds. content = \""<< *content << "\"" <<endl;
   
   return true;
 }
@@ -279,20 +286,26 @@ bool
 ServerDB::checkAndUpdate(const std::string &file_name, uint64_t instance_number,
 			 const std::string &content)
 {
+  cout<<"[DB] checkAndUpdate("<<file_name<<", "<<instance_number
+      <<", "<< content<<") ";
+
   SQLStmt s(db, "SELECT instance_number, content_generation_number "
 	    "FROM fs WHERE name = \"%s\"",
 	    file_name.c_str());
 
   s.step();
   if (!s.row()) {
-    // node does not exist
+    // node does not exist    
+    cout<< " fails. node does not exist"<<endl;
     return false;
   }
 
   // check INSTANCE_NUMBER
   uint64_t node_instance_number = s.integer(0);
-  if (node_instance_number != instance_number)
+  if (node_instance_number != instance_number) {
+    cout<< " fails. instance_number doesn't match"<<endl;
     return false;
+  }
     
   uint64_t new_content_generation_number = s.integer(1) + 1;
   uint64_t new_checksum = str_hash(content);
@@ -305,6 +318,7 @@ ServerDB::checkAndUpdate(const std::string &file_name, uint64_t instance_number,
 	  content.c_str(), new_content_generation_number,
 	  new_checksum, file_name.c_str());
   sqlexec("COMMIT;");
+  cout<< " succeeds."<<endl;
 
   return true;
 }
@@ -313,7 +327,7 @@ bool
 ServerDB::testAndSetLockOwner(const std::string &file_name, uint64_t instance_number,
 			      const std::string &client_id)
 {
-  cout<<"db: testAndSetLockOwner("<<file_name<<", "<<instance_number
+  cout<<"[DB] testAndSetLockOwner("<<file_name<<", "<<instance_number
       <<", "<< client_id<<") ";
   
   SQLStmt s(db, "SELECT instance_number, lock_owner, "
@@ -359,7 +373,7 @@ bool
 ServerDB::resetLockOwner(const std::string &file_name, uint64_t instance_number)
 {
   
-  cout<<"db: resetLockOwner("<<file_name<<", "<<instance_number<<") ";
+  cout<<"[DB] resetLockOwner("<<file_name<<", "<<instance_number<<") ";
   
   SQLStmt s(db, "SELECT instance_number FROM fs WHERE name = \"%s\"",
 	    file_name.c_str());

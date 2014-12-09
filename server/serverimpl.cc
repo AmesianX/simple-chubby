@@ -1,12 +1,13 @@
 // Scaffolding originally generated from include/server.x.
 // Edit to add functionality.
+#include "server/serverimpl.hh"
 
 #include <cstdint>
 #include <cassert>
 
 #include "server/chubby_server.h"
 
-#include "server/serverimpl.hh"
+
 
 const uint64_t READ = 0x1;
 const uint64_t WRITE = 0x2;
@@ -170,7 +171,7 @@ api_v1_server::fileOpen(std::unique_ptr<ArgOpen> arg,
   std::string client_id = session2client_map[session_id];
   assert(!client_id.empty());
 
-  cout<<"\nserver: fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
+  cout<<"[LEADER_LOGIC] fileOpen: ("<< file_name << ", "<< mode <<")"<<endl;
 
   if(!checkName(file_name)) {
     // return with error
@@ -262,7 +263,7 @@ api_v1_server::fileClose(std::unique_ptr<FileHandler> arg,
   std::string client_id = session2client_map[session_id];
   assert(!client_id.empty());
   
-  cout<<"\nserver: fileClose: ("<< arg->file_name << ", "
+  cout<<"[LEADER_LOGIC] fileClose: ("<< arg->file_name << ", "
       << arg->instance_number<<") client_id: "<< client_id<<endl;
 
   FileHandler *fd = findFd(session_id, *arg);
@@ -366,7 +367,7 @@ api_v1_server::fileDelete(std::unique_ptr<FileHandler> arg,
   std::string client_id = session2client_map[session_id];
   assert(!client_id.empty());
 
-  cout<<"\nserver: fileDelete: ("<< arg->file_name
+  cout<<"[LEADER_LOGIC] fileDelete: ("<< arg->file_name
       << ", "<< arg->instance_number<<")"<<endl;
   
   FileHandler *fd = findFd(session_id, *arg);
@@ -447,7 +448,7 @@ api_v1_server::getContentsAndStat(std::unique_ptr<FileHandler> arg,
                                   xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetContentsAndStat> res(new RetContentsAndStat);
-  cout<<"\nserver: getContentsAndStat: ("<< arg->file_name<< ", "
+  cout<<"[LEADER_LOGIC] getContentsAndStat: ("<< arg->file_name<< ", "
       << session_id<<")"<<endl;
   
   FileHandler *fd = findFd(session_id, *arg);
@@ -494,7 +495,7 @@ api_v1_server::setContents(std::unique_ptr<ArgSetContents> arg,
 {
   std::unique_ptr<RetBool> res(new RetBool);
   
-  cout<<"\nserver: setContents: ("<< arg->fd.file_name << ", "
+  cout<<"[LEADER_LOGIC] setContents: ("<< arg->fd.file_name << ", "
       << arg->content<<", "<<session_id<<")"<<endl;
 
   FileHandler *fd = findFd(session_id, arg->fd);
@@ -542,7 +543,7 @@ api_v1_server::acquire(std::unique_ptr<FileHandler> arg,
   std::string client_id = session2client_map[session_id];
   assert(!client_id.empty());
 
-  cout<<"\nserver: acquire: ("<< arg->file_name << ", "
+  cout<<"[LEADER_LOGIC] acquire: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<session_id<<")"<<endl;
   
   FileHandler *fd = findFd(session_id, *arg);
@@ -592,7 +593,7 @@ api_v1_server::tryAcquire(std::unique_ptr<FileHandler> arg,
   std::string client_id = session2client_map[session_id];
   assert(!client_id.empty());
 
-  cout<<"\nserver: tryAcquire: ("<< arg->file_name << ", "
+  cout<<"[LEADER_LOGIC] tryAcquire: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<session_id<<")"<<endl;
 
   FileHandler *fd = findFd(session_id, *arg);
@@ -644,7 +645,7 @@ api_v1_server::release(std::unique_ptr<FileHandler> arg,
   std::string client_id = session2client_map[session_id];
   assert(!client_id.empty());
 
-  cout<<"\nserver: release: ("<< arg->file_name << ", "
+  cout<<"[LEADER_LOGIC] release: ("<< arg->file_name << ", "
       << arg->instance_number<<", "<<session_id<<")"<<endl;
 
   FileHandler *fd = findFd(session_id, *arg);
@@ -719,7 +720,7 @@ api_v1_server::startSession(std::unique_ptr<longstring> arg,
 			    xdr::SessionId session_id, uint32_t xid)
 {
   std::unique_ptr<RetBool> res(new RetBool);
-  cout<<"\nserver: startSession: ("<< *arg << ", "<< session_id <<")"<<endl;
+  cout<<"[LEADER_LOGIC] startSession: ("<< *arg << ", "<< session_id <<")"<<endl;
   
   try {
     // If not the leader.
@@ -751,7 +752,7 @@ api_v1_server::fileReopen(std::unique_ptr<ArgReopen> arg,
   FileHandler fd = arg->fd;
   Mode mode = arg->mode;
   
-  cout<<"\nserver: fileReopen: ("<< fd.file_name << ", "<< mode <<")"<<endl;
+  cout<<"[LEADER_LOGIC] fileReopen: ("<< fd.file_name << ", "<< mode <<")"<<endl;
 
   // TODO check validality of FD
   FileHandler *new_fd = new FileHandler();
@@ -795,7 +796,7 @@ api_v1_server::disconnect(xdr::SessionId session_id)
 void
 api_v1_server::initializeLeader()
 {
-  std::cout << "[LEADER_LOGIC] Leader is initialized." << std::endl;
+  cout << "[LEADER_LOGIC] Leader is initialized." << endl;
   session2client_map.clear();
   file2fd_map.clear();
   session2fd_map.clear();
@@ -880,7 +881,7 @@ api_v1_server::sendLockChangeEvent(const std::string &file_name)
     evc.fname = file_name;
     for (auto s : file2lockChange_map[file_name]) {
       chubby_server_->send<event_interface::event_callback_t> (s, evc);
-      cout << "sent LockChange event to session "<< s<<endl;
+      cout << "[LEADER_LOGIC] Sent LockChange event to session "<< s<<endl;
     }
   }
 }
@@ -894,7 +895,7 @@ api_v1_server::sendContentChangeEvent(const std::string &file_name)
     evc.fname = file_name;
     for (auto s : file2contentChange_map[file_name]) {
       chubby_server_->send<event_interface::event_callback_t> (s, evc);
-      cout << "sent ContentModified event to session "<< s<<endl;
+      cout << "[LEADER_LOGIC] Sent ContentModified event to session "<< s<<endl;
     }
   }
 }
