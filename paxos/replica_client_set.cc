@@ -22,7 +22,7 @@ void ReplicaClientSet::detectFailure(
     ReplicaClientSet::ReplicaClientState* replica_client) {
   struct pollfd poll_fd;
   poll_fd.fd = replica_client->fd.get();
-  poll_fd.events = POLLHUP;
+  poll_fd.events = POLLHUP|POLLERR;
   poll_fd.revents = 0;
   // Poll until the other side hangs up the link.
   poll(&poll_fd, 1, -1);
