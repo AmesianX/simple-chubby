@@ -88,11 +88,13 @@ bool ChangeViewEngine::NotifyNewLeader() {
     return true;
   } else {
     printf("[PAXOS] Figured out new Paxos leader, rank#%d.\n", rank);
+    replica_state_->EndAccess();
     auto* replica_client = replica_client_set_->getReplicaClient(rank);
     assert(replica_client);
     init_view_arg init_view_instruction;
     // Notifies the new leader.
     auto result = replica_client->init_view(init_view_instruction);
+    replica_state_->BeginAccess();
     if (!result->succeed) {
       replica_state_->isLeader = false;
       replica_state_->view.primary.id = replica_state_->getReplicaAddress(rank);
