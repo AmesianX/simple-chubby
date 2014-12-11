@@ -727,6 +727,7 @@ api_v1_server::startSession(std::unique_ptr<longstring> arg,
     if (!db.isLeaderAndInitialized()) {
       res->discriminant(0);
       res->val() = false;
+      chubby_server_->reply(session_id, xid, std::move(res));
       return res;
     }
 
