@@ -10,12 +10,6 @@ The leader in a Viewstamp view is appointed as the SimpleChubby leader server.
 
 Our consensus implementation targets a correct consensus behavior
 rather than pushing hard for good performance.
-The implementation can reliably replicate data across replicas,
-achieve correct view change during server failures,
-and bring a new-coming replica database up-to-date.
-But leader lease as mentioned in the original Chubby paper is
-not implemented,
-and lots of operations are to be parallelized for performance.
 To make our implementation simple,
 a replica loses all its data and states after rebooting,
 which increases the overhead of bringing up a reboot replica.
